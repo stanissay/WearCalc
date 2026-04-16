@@ -78,6 +78,7 @@ object Symbols {
     const val COS = "cos"
     const val TAN = "tan"
     const val INF = "∞"
+    const val HUN = "100"
 }
 
 val TypographyStyle = Typography(

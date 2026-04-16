@@ -2,6 +2,7 @@ package say.wear.calculator
 
 import say.wear.calculator.Symbols.COS
 import say.wear.calculator.Symbols.DIV
+import say.wear.calculator.Symbols.HUN
 import say.wear.calculator.Symbols.INF
 import say.wear.calculator.Symbols.MINUS
 import say.wear.calculator.Symbols.MULTI
@@ -126,10 +127,10 @@ private fun toRpn(tokens: List<Token>): List<String> {
                 if (lastOp is Token.Operator && (lastOp.symbol == PLUS || lastOp.symbol == MINUS)) {
                     output.add(PER)
                     output.add(MULTI)
-                    output.add("100")
+                    output.add(HUN)
                     output.add(DIV)
                 } else {
-                    output.add("100")
+                    output.add(HUN)
                     output.add(DIV)
                 }
             }
