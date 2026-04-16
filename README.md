@@ -1,1 +1,1 @@
-Calculator for Wear Os
+Round Calculator for Wear OS
