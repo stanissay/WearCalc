@@ -1,4 +1,4 @@
-package say.wear.calculator
+package say.wear.calc
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -21,15 +21,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.wear.compose.material.MaterialTheme
-import say.wear.calculator.Symbols.DELETE
-import say.wear.calculator.Symbols.DOT
-import say.wear.calculator.Symbols.EXT
-import say.wear.calculator.Symbols.L_PAREN
-import say.wear.calculator.Symbols.PER
-import say.wear.calculator.Symbols.RES
-import say.wear.calculator.Symbols.R_PAREN
-import say.wear.calculator.UIConstants.BUTTON_SIZE
-import say.wear.calculator.UIConstants.CURSOR_PADDING
+import say.wear.calc.Symbols.DELETE
+import say.wear.calc.Symbols.DOT
+import say.wear.calc.Symbols.EXT
+import say.wear.calc.Symbols.L_PAREN
+import say.wear.calc.Symbols.PER
+import say.wear.calc.Symbols.RES
+import say.wear.calc.Symbols.R_PAREN
+import say.wear.calc.UIConstants.BUTTON_SIZE
+import say.wear.calc.UIConstants.CURSOR_PADDING
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin

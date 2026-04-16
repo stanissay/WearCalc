@@ -1,7 +1,7 @@
-package say.wear.calculator
+package say.wear.calc
 
-import say.wear.calculator.Symbols.DOT
-import say.wear.calculator.Symbols.MINUS
+import say.wear.calc.Symbols.DOT
+import say.wear.calc.Symbols.MINUS
 
 fun reduce(state: CalcState, input: Input): CalcState {
     return when (input) {

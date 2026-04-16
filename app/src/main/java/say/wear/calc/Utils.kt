@@ -1,4 +1,4 @@
-package say.wear.calculator
+package say.wear.calc
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -27,24 +27,24 @@ import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Colors
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Typography
-import say.wear.calculator.Colors.FirstAccent
-import say.wear.calculator.Colors.GrayColor
-import say.wear.calculator.Colors.SecondAccent
-import say.wear.calculator.Colors.SecondBackground
-import say.wear.calculator.Colors.WhiteColor
-import say.wear.calculator.Symbols.COS
-import say.wear.calculator.Symbols.DIV
-import say.wear.calculator.Symbols.L_PAREN
-import say.wear.calculator.Symbols.MINUS
-import say.wear.calculator.Symbols.MULTI
-import say.wear.calculator.Symbols.PER
-import say.wear.calculator.Symbols.PLUS
-import say.wear.calculator.Symbols.POW
-import say.wear.calculator.Symbols.R_PAREN
-import say.wear.calculator.Symbols.SIN
-import say.wear.calculator.Symbols.SQRT
-import say.wear.calculator.Symbols.TAN
-import say.wear.calculator.Symbols.U_MINUS
+import say.wear.calc.Colors.FirstAccent
+import say.wear.calc.Colors.GrayColor
+import say.wear.calc.Colors.SecondAccent
+import say.wear.calc.Colors.SecondBackground
+import say.wear.calc.Colors.WhiteColor
+import say.wear.calc.Symbols.COS
+import say.wear.calc.Symbols.DIV
+import say.wear.calc.Symbols.L_PAREN
+import say.wear.calc.Symbols.MINUS
+import say.wear.calc.Symbols.MULTI
+import say.wear.calc.Symbols.PER
+import say.wear.calc.Symbols.PLUS
+import say.wear.calc.Symbols.POW
+import say.wear.calc.Symbols.R_PAREN
+import say.wear.calc.Symbols.SIN
+import say.wear.calc.Symbols.SQRT
+import say.wear.calc.Symbols.TAN
+import say.wear.calc.Symbols.U_MINUS
 
 object UIConstants {
     val BUTTON_SIZE = 32.dp

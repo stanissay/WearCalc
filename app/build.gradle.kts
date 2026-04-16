@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "say.wear.calculator"
+    namespace = "say.wear.calc"
     compileSdk {
         version = release(36)
     }
