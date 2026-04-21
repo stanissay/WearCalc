@@ -3,12 +3,8 @@ package say.wear.calc
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,21 +14,16 @@ import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.wear.compose.material.MaterialTheme
-import say.wear.calc.Symbols.DELETE
-import say.wear.calc.Symbols.DOT
-import say.wear.calc.Symbols.EXT
-import say.wear.calc.Symbols.L_PAREN
-import say.wear.calc.Symbols.PER
-import say.wear.calc.Symbols.RES
-import say.wear.calc.Symbols.R_PAREN
-import say.wear.calc.UIConstants.BUTTON_SIZE
 import say.wear.calc.UIConstants.CURSOR_PADDING
+import say.wear.calc.UIConstants.CURSOR_WIDTH
+import say.wear.calc.UIConstants.DISPLAY_HEIGHT
+import say.wear.calc.UIConstants.DISPLAY_WIDTH
+import say.wear.calc.UIConstants.MATH_RATIO
+import say.wear.calc.UIConstants.NUMB_RATIO
+import say.wear.calc.UIConstants.ROTATION_THRESHOLD
 import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,7 +34,6 @@ class MainActivity : ComponentActivity() {
             MainTheme {
                 val focusRequester = remember { FocusRequester() }
                 var rotationAccumulator = 0f
-                val rotationThreshold = 30f
                 var state by remember { mutableStateOf(CalcState()) }
                 val displayResult by remember(state.tokens) {
                     derivedStateOf {
@@ -61,7 +51,7 @@ class MainActivity : ComponentActivity() {
                         .background(MaterialTheme.colors.background)
                         .onRotaryScrollEvent { rotaryEvent ->
                             rotationAccumulator += rotaryEvent.verticalScrollPixels
-                            if (abs(rotationAccumulator) >= rotationThreshold) {
+                            if (abs(rotationAccumulator) >= ROTATION_THRESHOLD) {
                                 val direction = if (rotationAccumulator > 0) 1 else -1
                                 state = moveCursor(state, direction)
                                 rotationAccumulator = 0f
@@ -95,43 +85,14 @@ fun CircularNumberPad(
     onClick: (Input) -> Unit,
     onLongClick: () -> Unit
 ) {
-    BoxWithConstraints(modifier = modifier.aspectRatio(1f)) {
-        val sizePx = constraints.maxWidth.toFloat()
-        val center = sizePx / 2f
-        val radius = sizePx * 0.35f
-        val angleStep = (2 * Math.PI) / NumberItems.size
-
-        NumberItems.forEachIndexed { index, input ->
-            val angle = angleStep * index - Math.PI / 2
-            val x = center + radius * cos(angle).toFloat()
-            val y = center + radius * sin(angle).toFloat()
-            val text = when (input) {
-                is Input.Digit -> input.value
-                is Input.Operator -> input.symbol
-                is Input.Function -> input.name
-                is Input.Result -> RES
-                is Input.Extended -> EXT
-                is Input.Dot -> DOT
-                is Input.Delete -> DELETE
-                is Input.LeftParen -> L_PAREN
-                is Input.RightParen -> R_PAREN
-                is Input.Percent -> PER
-            }
-
-            ClickableBox(
-                modifier = Modifier
-                    .offset {
-                        IntOffset(
-                            (x - (BUTTON_SIZE/2).toPx()).toInt(),
-                            (y - (BUTTON_SIZE/2).toPx()).toInt()
-                        )
-                    }
-                    .size(BUTTON_SIZE),
-                onClick = { onClick(input) },
-                onLongClick = { if(input is Input.Delete) onLongClick() }
-            ) { MainText(text = text, color = MaterialTheme.colors.primary) }
-        }
-    }
+    CircularPad(
+        modifier = modifier,
+        items = NumberItems,
+        radiusRatio = NUMB_RATIO,
+        contentColor = MaterialTheme.colors.primary,
+        onClick = onClick,
+        onLongClick = { if (it is Input.Delete) onLongClick() }
+    )
 }
 
 @Composable
@@ -140,44 +101,13 @@ fun CircularMathPad(
     isExtended: Boolean,
     onClick: (Input) -> Unit
 ) {
-    val items = if (isExtended) ExtendedMathItems else BaseMathItems
-
-    BoxWithConstraints(modifier = modifier.aspectRatio(1f)) {
-        val sizePx = constraints.maxWidth.toFloat()
-        val center = sizePx / 2f
-        val radius = sizePx * 0.225f
-        val angleStep = (2 * Math.PI) / items.size
-
-        items.forEachIndexed { index, input ->
-            val angle = angleStep * index - Math.PI / 2
-            val x = center + radius * cos(angle).toFloat()
-            val y = center + radius * sin(angle).toFloat()
-            val text = when (input) {
-                is Input.Digit -> input.value
-                is Input.Operator -> input.symbol
-                is Input.Function -> input.name
-                is Input.Result -> RES
-                is Input.Extended -> EXT
-                is Input.Dot -> DOT
-                is Input.Delete -> DELETE
-                is Input.LeftParen -> L_PAREN
-                is Input.RightParen -> R_PAREN
-                is Input.Percent -> PER
-            }
-
-            ClickableBox(
-                modifier = Modifier
-                    .offset {
-                        IntOffset(
-                            (x - (BUTTON_SIZE/2).toPx()).toInt(),
-                            (y - (BUTTON_SIZE/2).toPx()).toInt()
-                        )
-                    }
-                    .size(BUTTON_SIZE),
-                onClick = { onClick(input) }
-            ) { MainText(text = text, color = MaterialTheme.colors.secondary) }
-        }
-    }
+    CircularPad(
+        modifier = modifier,
+        items = if (isExtended) ExtendedMathItems else BaseMathItems,
+        radiusRatio = MATH_RATIO,
+        contentColor = MaterialTheme.colors.secondary,
+        onClick = onClick
+    )
 }
 
 @Composable
@@ -215,7 +145,7 @@ fun CenterDisplay(state: CalcState, displayResult: String) {
         }
     }
 
-    Column(modifier = Modifier.height(48.dp).width(64.dp)) {
+    Column(modifier = Modifier.height(DISPLAY_HEIGHT).width(DISPLAY_WIDTH)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -241,7 +171,7 @@ fun CenterDisplay(state: CalcState, displayResult: String) {
                             modifier = Modifier
                                 .padding(horizontal = CURSOR_PADDING)
                                 .offset { IntOffset(rect.left.toInt(), 0) }
-                                .width(1.dp)
+                                .width(CURSOR_WIDTH)
                                 .height(with(density) { rect.height.toDp() })
                                 .background(MaterialTheme.colors.surface)
                         )
@@ -252,11 +182,6 @@ fun CenterDisplay(state: CalcState, displayResult: String) {
         Box(
             modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(resultScrollState),
             contentAlignment = Alignment.Center
-        ) {
-            MainText(
-                text = displayResult,
-                maxLines = Int.MAX_VALUE
-            )
-        }
+        ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
     }
 }

@@ -5,6 +5,10 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -21,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,22 +38,36 @@ import say.wear.calc.Colors.SecondAccent
 import say.wear.calc.Colors.SecondBackground
 import say.wear.calc.Colors.WhiteColor
 import say.wear.calc.Symbols.COS
+import say.wear.calc.Symbols.DELETE
 import say.wear.calc.Symbols.DIV
+import say.wear.calc.Symbols.DOT
+import say.wear.calc.Symbols.EXT
 import say.wear.calc.Symbols.L_PAREN
 import say.wear.calc.Symbols.MINUS
 import say.wear.calc.Symbols.MULTI
 import say.wear.calc.Symbols.PER
 import say.wear.calc.Symbols.PLUS
 import say.wear.calc.Symbols.POW
+import say.wear.calc.Symbols.RES
 import say.wear.calc.Symbols.R_PAREN
 import say.wear.calc.Symbols.SIN
 import say.wear.calc.Symbols.SQRT
 import say.wear.calc.Symbols.TAN
 import say.wear.calc.Symbols.U_MINUS
+import say.wear.calc.UIConstants.BUTTON_SIZE
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 object UIConstants {
     val BUTTON_SIZE = 32.dp
+    val DISPLAY_HEIGHT = 48.dp
+    val DISPLAY_WIDTH = 64.dp
     val CURSOR_PADDING = 4.dp
+    val CURSOR_WIDTH = 1.dp
+    const val ROTATION_THRESHOLD = 30f
+    const val NUMB_RATIO = 0.350f
+    const val MATH_RATIO = 0.225f
 }
 
 object Colors {
@@ -82,7 +101,7 @@ object Symbols {
 }
 
 val TypographyStyle = Typography(
-    body1 = TextStyle(fontSize = 14.sp)
+    body1 = TextStyle(fontSize = 16.sp)
 )
 
 val ColorStyle = Colors(
@@ -186,6 +205,19 @@ fun List<Token>.toDisplayString(): String {
     }
 }
 
+fun Input.toDisplayString(): String = when (this) {
+    is Input.Digit -> value
+    is Input.Operator -> symbol
+    is Input.Function -> name
+    is Input.Result -> RES
+    is Input.Extended -> EXT
+    is Input.Dot -> DOT
+    is Input.Delete -> DELETE
+    is Input.LeftParen -> L_PAREN
+    is Input.RightParen -> R_PAREN
+    is Input.Percent -> PER
+}
+
 @Composable
 fun MainTheme(content: @Composable () -> Unit) {
     MaterialTheme(
@@ -286,4 +318,40 @@ fun MainText(
         fontSize = fontSize,
         onTextLayout = onTextLayout
     )
+}
+
+@Composable
+fun CircularPad(
+    modifier: Modifier = Modifier,
+    items: List<Input>,
+    radiusRatio: Float,
+    contentColor: Color,
+    onClick: (Input) -> Unit,
+    onLongClick: (Input) -> Unit = {}
+) {
+    BoxWithConstraints(modifier = modifier.aspectRatio(1f)) {
+        val sizePx = constraints.maxWidth.toFloat()
+        val center = sizePx / 2f
+        val radius = sizePx * radiusRatio
+        val angleStep = (2 * PI) / items.size
+
+        items.forEachIndexed { index, input ->
+            val angle = angleStep * index - PI / 2
+            val x = center + radius * cos(angle).toFloat()
+            val y = center + radius * sin(angle).toFloat()
+
+            ClickableBox(
+                modifier = Modifier
+                    .offset {
+                        IntOffset(
+                            (x - (BUTTON_SIZE / 2).toPx()).toInt(),
+                            (y - (BUTTON_SIZE / 2).toPx()).toInt()
+                        )
+                    }
+                    .size(BUTTON_SIZE),
+                onClick = { onClick(input) },
+                onLongClick = { onLongClick(input) }
+            ) { MainText(text = input.toDisplayString(), color = contentColor) }
+        }
+    }
 }
