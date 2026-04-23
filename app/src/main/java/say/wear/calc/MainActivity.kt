@@ -116,6 +116,7 @@ class MainActivity : ComponentActivity() {
                                     totalDragDistance += dragAmount
 
                                     if (totalDragDistance < -thresholdPx && !isSwipeHandled) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
                                         state = reduce(state, Input.Delete)
                                         isSwipeHandled = true
                                         change.consume()
@@ -126,6 +127,7 @@ class MainActivity : ComponentActivity() {
                         .onRotaryScrollEvent { rotaryEvent ->
                             rotationAccumulator += rotaryEvent.verticalScrollPixels
                             if (abs(rotationAccumulator) >= ROTATION_THRESHOLD) {
+                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                                 val direction = if (rotationAccumulator > 0) 1 else -1
                                 state = moveCursor(state, direction)
                                 rotationAccumulator = 0f
