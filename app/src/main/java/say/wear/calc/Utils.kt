@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -237,40 +239,35 @@ fun ClickableBox(
     bounded: Boolean = true,
     onClick: () -> Unit = {},
     onLongClick: (() -> Unit)? = null,
-    onDoubleClick: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val haptic = LocalHapticFeedback.current
+
+    val wrappedOnClick = {
+        haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+        onClick()
+    }
+
+    val wrappedOnLongClick = onLongClick?.let { original ->
+        {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            original()
+        }
+    }
 
     val clickModifier = when {
-        onLongClick == null && onDoubleClick == null -> {
+        onLongClick == null -> {
             Modifier.clickable(
-                onClick = onClick,
-                indication = ripple(bounded, rippleRadius, rippleColor),
-                interactionSource = interactionSource
-            )
-        }
-        onLongClick == null && onDoubleClick != null -> {
-            Modifier.combinedClickable(
-                onClick = onClick,
-                onDoubleClick = onDoubleClick,
-                indication = ripple(bounded, rippleRadius, rippleColor),
-                interactionSource = interactionSource
-            )
-        }
-        onLongClick != null && onDoubleClick == null -> {
-            Modifier.combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick,
+                onClick = wrappedOnClick,
                 indication = ripple(bounded, rippleRadius, rippleColor),
                 interactionSource = interactionSource
             )
         }
         else -> {
             Modifier.combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick,
-                onDoubleClick = onDoubleClick,
+                onClick = wrappedOnClick,
+                onLongClick = wrappedOnLongClick,
                 indication = ripple(bounded, rippleRadius, rippleColor),
                 interactionSource = interactionSource
             )
