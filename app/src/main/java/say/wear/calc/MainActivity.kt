@@ -1,21 +1,34 @@
 package say.wear.calc
 
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.wear.compose.material.MaterialTheme
+import say.wear.calc.UIConstants.ACCELERATION_DELAY
+import say.wear.calc.UIConstants.ACCELERATION_THRESHOLD
 import say.wear.calc.UIConstants.CURSOR_PADDING
 import say.wear.calc.UIConstants.CURSOR_WIDTH
 import say.wear.calc.UIConstants.DISPLAY_HEIGHT
@@ -23,7 +36,9 @@ import say.wear.calc.UIConstants.DISPLAY_WIDTH
 import say.wear.calc.UIConstants.MATH_RATIO
 import say.wear.calc.UIConstants.NUMB_RATIO
 import say.wear.calc.UIConstants.ROTATION_THRESHOLD
+import say.wear.calc.UIConstants.SWIPE_RATIO
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,12 +47,52 @@ class MainActivity : ComponentActivity() {
         setTheme(android.R.style.Theme_DeviceDefault)
         setContent {
             MainTheme {
+                val context = LocalContext.current
+                val haptic = LocalHapticFeedback.current
+                val configuration = LocalConfiguration.current
+                val density = LocalDensity.current
                 val focusRequester = remember { FocusRequester() }
                 var rotationAccumulator = 0f
+                val thresholdPx = with(density) { (configuration.screenWidthDp * SWIPE_RATIO).dp.toPx() }
+                var totalDragDistance by remember { mutableFloatStateOf(0f) }
+                var isSwipeHandled by remember { mutableStateOf(false) }
                 var state by remember { mutableStateOf(CalcState()) }
                 val displayResult by remember(state.tokens) {
                     derivedStateOf {
                         evaluate(state.tokens)
+                    }
+                }
+
+                DisposableEffect(Unit) {
+                    val sensorManager = context.getSystemService(SENSOR_SERVICE) as SensorManager
+                    val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+                    var lastShakeTime = 0L
+
+                    val sensorListener = object : SensorEventListener {
+                        override fun onSensorChanged(event: SensorEvent?) {
+                            if (event == null) return
+                            val x = event.values[0]
+                            val y = event.values[1]
+                            val z = event.values[2]
+                            val acceleration = sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH
+
+                            if (acceleration > ACCELERATION_THRESHOLD && !state.tokens.isEmpty()) {
+                                val currentTime = System.currentTimeMillis()
+                                if (currentTime - lastShakeTime > ACCELERATION_DELAY) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                                    state = CalcState()
+                                    lastShakeTime = currentTime
+                                }
+                            }
+                        }
+
+                        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+                    }
+
+                    if (accelerometer != null) sensorManager.registerListener(sensorListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
+
+                    onDispose {
+                        if (accelerometer != null) sensorManager.unregisterListener(sensorListener)
                     }
                 }
 
@@ -49,6 +104,25 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colors.background)
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragStart = {
+                                    totalDragDistance = 0f
+                                    isSwipeHandled = false
+                                },
+                                onDragEnd = { totalDragDistance = 0f },
+                                onDragCancel = { totalDragDistance = 0f },
+                                onHorizontalDrag = { change, dragAmount ->
+                                    totalDragDistance += dragAmount
+
+                                    if (totalDragDistance < -thresholdPx && !isSwipeHandled) {
+                                        state = reduce(state, Input.Delete)
+                                        isSwipeHandled = true
+                                        change.consume()
+                                    }
+                                }
+                            )
+                        }
                         .onRotaryScrollEvent { rotaryEvent ->
                             rotationAccumulator += rotaryEvent.verticalScrollPixels
                             if (abs(rotationAccumulator) >= ROTATION_THRESHOLD) {

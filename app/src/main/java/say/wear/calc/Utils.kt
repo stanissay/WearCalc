@@ -70,6 +70,9 @@ object UIConstants {
     const val ROTATION_THRESHOLD = 30f
     const val NUMB_RATIO = 0.350f
     const val MATH_RATIO = 0.225f
+    const val ACCELERATION_THRESHOLD = 12f
+    const val ACCELERATION_DELAY = 1000
+    const val SWIPE_RATIO = 0.4f
 }
 
 object Colors {
