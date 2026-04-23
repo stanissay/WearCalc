@@ -65,6 +65,7 @@ object UIConstants {
     val BUTTON_SIZE = 32.dp
     val DISPLAY_HEIGHT = 48.dp
     val DISPLAY_WIDTH = 64.dp
+    val AMBIENT_SIZE = 128.dp
     val CURSOR_PADDING = 4.dp
     val CURSOR_WIDTH = 1.dp
     const val ROTATION_THRESHOLD = 30f

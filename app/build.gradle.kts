@@ -14,7 +14,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0.9"
+        versionName = "1.1.0"
     }
 
     buildTypes {
@@ -51,6 +51,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
     implementation("androidx.compose.runtime:runtime:1.11.0")
+    implementation("androidx.wear:wear:1.4.0")
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.04.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")

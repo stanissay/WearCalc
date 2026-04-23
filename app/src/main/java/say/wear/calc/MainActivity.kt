@@ -26,9 +26,12 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.wear.ambient.AmbientLifecycleObserver
 import androidx.wear.compose.material.MaterialTheme
 import say.wear.calc.UIConstants.ACCELERATION_DELAY
 import say.wear.calc.UIConstants.ACCELERATION_THRESHOLD
+import say.wear.calc.UIConstants.AMBIENT_SIZE
 import say.wear.calc.UIConstants.CURSOR_PADDING
 import say.wear.calc.UIConstants.CURSOR_WIDTH
 import say.wear.calc.UIConstants.DISPLAY_HEIGHT
@@ -51,16 +54,39 @@ class MainActivity : ComponentActivity() {
                 val haptic = LocalHapticFeedback.current
                 val configuration = LocalConfiguration.current
                 val density = LocalDensity.current
+                val lifecycleOwner = LocalLifecycleOwner.current
                 val focusRequester = remember { FocusRequester() }
                 var rotationAccumulator = 0f
                 val thresholdPx = with(density) { (configuration.screenWidthDp * SWIPE_RATIO).dp.toPx() }
                 var totalDragDistanceX by remember { mutableFloatStateOf(0f) }
                 var totalDragDistanceY by remember { mutableFloatStateOf(0f) }
                 var isSwipeHandled by remember { mutableStateOf(false) }
+                val ambientState = remember { mutableStateOf(false) }
                 var state by remember { mutableStateOf(CalcState()) }
                 val displayResult by remember(state.tokens) {
                     derivedStateOf {
                         evaluate(state.tokens)
+                    }
+                }
+
+                DisposableEffect(lifecycleOwner) {
+                    val observer = AmbientLifecycleObserver(
+                        activity = this@MainActivity,
+                        callbacks = object : AmbientLifecycleObserver.AmbientLifecycleCallback {
+                            override fun onEnterAmbient(ambientDetails: AmbientLifecycleObserver.AmbientDetails) {
+                                ambientState.value = true
+                            }
+                            override fun onExitAmbient() {
+                                ambientState.value = false
+                            }
+                            override fun onUpdateAmbient() {}
+                        }
+                    )
+
+                    lifecycleOwner.lifecycle.addObserver(observer)
+
+                    onDispose {
+                        lifecycleOwner.lifecycle.removeObserver(observer)
                     }
                 }
 
@@ -101,76 +127,85 @@ class MainActivity : ComponentActivity() {
                     focusRequester.requestFocus()
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colors.background)
-                        .pointerInput(Unit) {
-                            detectDragGestures(
-                                onDragStart = {
-                                    totalDragDistanceX = 0f
-                                    totalDragDistanceY = 0f
-                                    isSwipeHandled = false
-                                },
-                                onDragEnd = {
-                                    totalDragDistanceX = 0f
-                                    totalDragDistanceY = 0f
-                                    isSwipeHandled = false
-                                },
-                                onDragCancel = {
-                                    totalDragDistanceX = 0f
-                                    totalDragDistanceY = 0f
-                                    isSwipeHandled = false
-                                },
-                                onDrag = { change, dragAmount ->
-                                    if (isSwipeHandled) return@detectDragGestures
-                                    totalDragDistanceX += dragAmount.x
-                                    totalDragDistanceY += dragAmount.y
+                if(!ambientState.value) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colors.background)
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDragStart = {
+                                        totalDragDistanceX = 0f
+                                        totalDragDistanceY = 0f
+                                        isSwipeHandled = false
+                                    },
+                                    onDragEnd = {
+                                        totalDragDistanceX = 0f
+                                        totalDragDistanceY = 0f
+                                        isSwipeHandled = false
+                                    },
+                                    onDragCancel = {
+                                        totalDragDistanceX = 0f
+                                        totalDragDistanceY = 0f
+                                        isSwipeHandled = false
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        if (isSwipeHandled) return@detectDragGestures
+                                        totalDragDistanceX += dragAmount.x
+                                        totalDragDistanceY += dragAmount.y
 
-                                    if (abs(totalDragDistanceX) > thresholdPx || abs(totalDragDistanceY) > thresholdPx) {
-                                        if (abs(totalDragDistanceX) > abs(totalDragDistanceY)) {
-                                            if (totalDragDistanceX < -thresholdPx) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                                state = reduce(state, Input.Delete)
-                                                isSwipeHandled = true
+                                        if (abs(totalDragDistanceX) > thresholdPx || abs(totalDragDistanceY) > thresholdPx) {
+                                            if (abs(totalDragDistanceX) > abs(totalDragDistanceY)) {
+                                                if (totalDragDistanceX < -thresholdPx) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                    state = reduce(state, Input.Delete)
+                                                    isSwipeHandled = true
+                                                }
+                                            } else {
+                                                if (totalDragDistanceY < -thresholdPx) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                    state = state.copy(isExtended = !state.isExtended)
+                                                    isSwipeHandled = true
+                                                }
                                             }
-                                        } else {
-                                            if (totalDragDistanceY < -thresholdPx) {
-                                                haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                                state = state.copy(isExtended = !state.isExtended)
-                                                isSwipeHandled = true
-                                            }
+                                            change.consume()
                                         }
-                                        change.consume()
                                     }
-                                }
-                            )
-                        }
-                        .onRotaryScrollEvent { rotaryEvent ->
-                            rotationAccumulator += rotaryEvent.verticalScrollPixels
-                            if (abs(rotationAccumulator) >= ROTATION_THRESHOLD) {
-                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                val direction = if (rotationAccumulator > 0) 1 else -1
-                                state = moveCursor(state, direction)
-                                rotationAccumulator = 0f
+                                )
                             }
-                            true
-                        }
-                        .focusRequester(focusRequester)
-                        .focusable(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularNumberPad(
-                        modifier = Modifier,
-                        onClick = { input -> state = reduce(state, input) },
-                        onLongClick = { state = CalcState() }
-                    )
-                    CircularMathPad(
-                        modifier = Modifier,
-                        isExtended = state.isExtended,
-                        onClick = { input -> state = reduce(state, input) }
-                    )
-                    CenterDisplay(state = state, displayResult = displayResult)
+                            .onRotaryScrollEvent { rotaryEvent ->
+                                rotationAccumulator += rotaryEvent.verticalScrollPixels
+                                if (abs(rotationAccumulator) >= ROTATION_THRESHOLD) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    val direction = if (rotationAccumulator > 0) 1 else -1
+                                    state = moveCursor(state, direction)
+                                    rotationAccumulator = 0f
+                                }
+                                true
+                            }
+                            .focusRequester(focusRequester)
+                            .focusable(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularNumberPad(
+                            modifier = Modifier,
+                            onClick = { input -> state = reduce(state, input) },
+                            onLongClick = { state = CalcState() }
+                        )
+                        CircularMathPad(
+                            modifier = Modifier,
+                            isExtended = state.isExtended,
+                            onClick = { input -> state = reduce(state, input) }
+                        )
+                        CenterDisplay(state = state, displayResult = displayResult)
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colors.background),
+                        contentAlignment = Alignment.Center
+                    ) { AmbientDisplay(displayResult) }
                 }
             }
         }
@@ -282,4 +317,12 @@ fun CenterDisplay(state: CalcState, displayResult: String) {
             contentAlignment = Alignment.Center
         ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
     }
+}
+
+@Composable
+fun AmbientDisplay(displayResult: String) {
+    Box(
+        modifier = Modifier.size(AMBIENT_SIZE),
+        contentAlignment = Alignment.Center
+    ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
 }
