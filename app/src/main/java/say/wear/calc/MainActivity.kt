@@ -8,7 +8,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.*
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -54,7 +54,8 @@ class MainActivity : ComponentActivity() {
                 val focusRequester = remember { FocusRequester() }
                 var rotationAccumulator = 0f
                 val thresholdPx = with(density) { (configuration.screenWidthDp * SWIPE_RATIO).dp.toPx() }
-                var totalDragDistance by remember { mutableFloatStateOf(0f) }
+                var totalDragDistanceX by remember { mutableFloatStateOf(0f) }
+                var totalDragDistanceY by remember { mutableFloatStateOf(0f) }
                 var isSwipeHandled by remember { mutableStateOf(false) }
                 var state by remember { mutableStateOf(CalcState()) }
                 val displayResult by remember(state.tokens) {
@@ -105,20 +106,41 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .background(MaterialTheme.colors.background)
                         .pointerInput(Unit) {
-                            detectHorizontalDragGestures(
+                            detectDragGestures(
                                 onDragStart = {
-                                    totalDragDistance = 0f
+                                    totalDragDistanceX = 0f
+                                    totalDragDistanceY = 0f
                                     isSwipeHandled = false
                                 },
-                                onDragEnd = { totalDragDistance = 0f },
-                                onDragCancel = { totalDragDistance = 0f },
-                                onHorizontalDrag = { change, dragAmount ->
-                                    totalDragDistance += dragAmount
+                                onDragEnd = {
+                                    totalDragDistanceX = 0f
+                                    totalDragDistanceY = 0f
+                                    isSwipeHandled = false
+                                },
+                                onDragCancel = {
+                                    totalDragDistanceX = 0f
+                                    totalDragDistanceY = 0f
+                                    isSwipeHandled = false
+                                },
+                                onDrag = { change, dragAmount ->
+                                    if (isSwipeHandled) return@detectDragGestures
+                                    totalDragDistanceX += dragAmount.x
+                                    totalDragDistanceY += dragAmount.y
 
-                                    if (totalDragDistance < -thresholdPx && !isSwipeHandled) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                        state = reduce(state, Input.Delete)
-                                        isSwipeHandled = true
+                                    if (abs(totalDragDistanceX) > thresholdPx || abs(totalDragDistanceY) > thresholdPx) {
+                                        if (abs(totalDragDistanceX) > abs(totalDragDistanceY)) {
+                                            if (totalDragDistanceX < -thresholdPx) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                state = reduce(state, Input.Delete)
+                                                isSwipeHandled = true
+                                            }
+                                        } else {
+                                            if (totalDragDistanceY < -thresholdPx) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                state = state.copy(isExtended = !state.isExtended)
+                                                isSwipeHandled = true
+                                            }
+                                        }
                                         change.consume()
                                     }
                                 }
