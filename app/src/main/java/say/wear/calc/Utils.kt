@@ -73,6 +73,9 @@ object UIConstants {
     const val ACCELERATION_DELAY = 1000
     const val SWIPE_RATIO = 0.4f
     const val RESTORE_TIMEOUT = 5 * 60 * 1000   // 5 minutes
+    const val SCREEN_ANIMATION_DURATION = 300
+    const val PAD_ANIMATION_DURATION = 500
+    const val TEXT_ANIMATION_DURATION = 200
 }
 
 object Colors {

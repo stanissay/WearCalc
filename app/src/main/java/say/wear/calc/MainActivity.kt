@@ -9,6 +9,10 @@ import android.hardware.SensorManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
@@ -46,16 +50,14 @@ import say.wear.calc.UIConstants.KEY_STATE
 import say.wear.calc.UIConstants.KEY_TIMESTAMP
 import say.wear.calc.UIConstants.MATH_RATIO
 import say.wear.calc.UIConstants.NUMB_RATIO
+import say.wear.calc.UIConstants.PAD_ANIMATION_DURATION
 import say.wear.calc.UIConstants.PREFS_NAME
 import say.wear.calc.UIConstants.RESTORE_TIMEOUT
 import say.wear.calc.UIConstants.ROTATION_THRESHOLD
+import say.wear.calc.UIConstants.SCREEN_ANIMATION_DURATION
 import say.wear.calc.UIConstants.SWIPE_RATIO
-import kotlin.math.PI
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
+import say.wear.calc.UIConstants.TEXT_ANIMATION_DURATION
+import kotlin.math.*
 
 class MainActivity : ComponentActivity() {
     private var state by mutableStateOf(CalcState())
@@ -157,15 +159,23 @@ fun CalcScreen(
         onDispose { sensorManager.unregisterListener(listener) }
     }
 
-    if (!ambientState.value) {
-        ActiveDisplay(
-            state = state,
-            displayResult = displayResult,
-            onStateChange = onStateChange,
-            onFinish = onFinish
-        )
-    } else {
-        AmbientDisplay(displayResult = displayResult.ifBlank { currentState.tokens.toDisplayString() })
+    Crossfade(
+        targetState = ambientState.value,
+        animationSpec = tween(durationMillis = SCREEN_ANIMATION_DURATION, easing = LinearOutSlowInEasing),
+        label = "ambientTransition"
+    ) { isAmbient ->
+        if (isAmbient) {
+            AmbientDisplay(
+                displayResult = displayResult.ifBlank { currentState.tokens.toDisplayString() }
+            )
+        } else {
+            ActiveDisplay(
+                state = state,
+                displayResult = displayResult,
+                onStateChange = onStateChange,
+                onFinish = onFinish
+            )
+        }
     }
 }
 
@@ -285,13 +295,24 @@ fun CircularMathPad(
     isExtended: Boolean,
     onClick: (Input) -> Unit
 ) {
-    CircularPad(
+    AnimatedContent(
+        targetState = isExtended,
+        transitionSpec = {
+            slideInVertically(animationSpec = tween(PAD_ANIMATION_DURATION, easing = FastOutSlowInEasing)) { it / 2 } +
+                    fadeIn(animationSpec = tween(PAD_ANIMATION_DURATION)) togetherWith
+                    slideOutVertically(animationSpec = tween(PAD_ANIMATION_DURATION, easing = FastOutSlowInEasing)) { -it / 2 } +
+                    fadeOut(animationSpec = tween(PAD_ANIMATION_DURATION))
+        },
         modifier = modifier,
-        items = if (isExtended) ExtendedMathItems else BaseMathItems,
-        radiusRatio = MATH_RATIO,
-        contentColor = MaterialTheme.colors.secondary,
-        onClick = onClick
-    )
+        label = "mathPadTransition"
+    ) { extended ->
+        CircularPad(
+            items = if (extended) ExtendedMathItems else BaseMathItems,
+            radiusRatio = MATH_RATIO,
+            contentColor = MaterialTheme.colors.secondary,
+            onClick = onClick
+        )
+    }
 }
 
 @Composable
@@ -338,11 +359,7 @@ fun CenterDisplay(
         rippleColor = Color.Transparent,
         onClick = { onClick(Input.Result) }
     ) {
-        Column(
-            modifier = Modifier
-                .height(DISPLAY_HEIGHT)
-                .width(DISPLAY_WIDTH)
-        ) {
+        Column(modifier = Modifier.height(DISPLAY_HEIGHT).width(DISPLAY_WIDTH)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -350,36 +367,61 @@ fun CenterDisplay(
                     .horizontalScroll(inputScrollState),
                 contentAlignment = Alignment.CenterStart
             ) {
-                MainText(
-                    modifier = Modifier.padding(horizontal = CURSOR_PADDING),
-                    text = text,
-                    onTextLayout = { layoutResult = it }
-                )
+                AnimatedContent(
+                    targetState = text,
+                    transitionSpec = {
+                        scaleIn(animationSpec = tween(TEXT_ANIMATION_DURATION), initialScale = 0.9f) + fadeIn(tween(TEXT_ANIMATION_DURATION)) togetherWith
+                                scaleOut(animationSpec = tween(TEXT_ANIMATION_DURATION), targetScale = 1f) + fadeOut(tween(TEXT_ANIMATION_DURATION))
+                    },
+                    label = "deleteAnimation"
+                ) { text ->
+                    MainText(
+                        modifier = Modifier.padding(horizontal = CURSOR_PADDING),
+                        text = text,
+                        onTextLayout = { layoutResult = it }
+                    )
 
-                val layout = layoutResult
-                if (layout != null && text.isNotEmpty()) {
-                    if (stringCursorIndex <= layout.layoutInput.text.length) {
-                        val cursorRect = runCatching {
-                            layout.getCursorRect(stringCursorIndex)
-                        }.getOrNull()
+                    val layout = layoutResult
+                    if (layout != null && text.isNotEmpty()) {
+                        if (stringCursorIndex <= layout.layoutInput.text.length) {
+                            val cursorRect = runCatching {
+                                layout.getCursorRect(stringCursorIndex)
+                            }.getOrNull()
 
-                        cursorRect?.let { rect ->
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = CURSOR_PADDING)
-                                    .offset { IntOffset(rect.left.toInt(), 0) }
-                                    .width(CURSOR_WIDTH)
-                                    .height(with(density) { rect.height.toDp() })
-                                    .background(MaterialTheme.colors.surface)
-                            )
+                            cursorRect?.let { rect ->
+                                Box(
+                                    modifier = Modifier
+                                        .padding(horizontal = CURSOR_PADDING)
+                                        .offset { IntOffset(rect.left.toInt(), 0) }
+                                        .width(CURSOR_WIDTH)
+                                        .height(with(density) { rect.height.toDp() })
+                                        .background(MaterialTheme.colors.surface)
+                                )
+                            }
                         }
                     }
                 }
             }
-            Box(
-                modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(resultScrollState),
-                contentAlignment = Alignment.Center
-            ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
+            AnimatedContent(
+                targetState = displayResult,
+                transitionSpec = {
+                    if (targetState.isBlank()) {
+                        (fadeIn(animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
+                                scaleIn(initialScale = 1f, animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing))) togetherWith
+                                (fadeOut(animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
+                                scaleOut(targetScale = 0.9f, animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)))
+                    } else {
+                        scaleIn(animationSpec = tween(TEXT_ANIMATION_DURATION), initialScale = 0.9f) + fadeIn(tween(TEXT_ANIMATION_DURATION)) togetherWith
+                                scaleOut(animationSpec = tween(TEXT_ANIMATION_DURATION), targetScale = 1f) + fadeOut(tween(TEXT_ANIMATION_DURATION))
+                    }
+                },
+                label = "clearAnimation"
+            ) { text ->
+                Box(
+                    modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(resultScrollState),
+                    contentAlignment = Alignment.Center
+                ) { MainText(text = text, maxLines = Int.MAX_VALUE) }
+            }
         }
     }
 }

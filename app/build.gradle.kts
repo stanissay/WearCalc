@@ -1,3 +1,7 @@
+@file:Suppress("MISSING_DEPENDENCY_SUPERCLASS_IN_TYPE_ARGUMENT")
+
+import org.gradle.api.JavaVersion.VERSION_11
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
@@ -15,7 +19,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = 1
-        versionName = "1.1.4"
+        versionName = "1.1.5"
     }
 
     buildTypes {
@@ -26,8 +30,8 @@ android {
         base.archivesName = "WearCalc-" + defaultConfig.versionName
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = VERSION_11
+        targetCompatibility = VERSION_11
     }
     useLibrary("wear-sdk")
     buildFeatures {

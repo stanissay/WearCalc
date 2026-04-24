@@ -270,6 +270,8 @@ private fun canInsertOperator(tokens: List<Token>, index: Int, offset: Int): Boo
 
 private fun canInsertFunction(tokens: List<Token>, index: Int, offset: Int): Boolean {
     if (index == 0 && offset == 0) return true
+    val tokenUnderCursor = tokens.getOrNull(index)
+    if (tokenUnderCursor is Token.Number && offset > 0) return false
     val prevToken = tokens.getOrNull(index - 1)
     return prevToken is Token.Operator ||
             prevToken is Token.UnaryMinus ||
