@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
@@ -36,6 +37,7 @@ import kotlinx.serialization.json.Json
 import say.wear.calc.UIConstants.ACCELERATION_DELAY
 import say.wear.calc.UIConstants.ACCELERATION_THRESHOLD
 import say.wear.calc.UIConstants.AMBIENT_SIZE
+import say.wear.calc.UIConstants.BUTTON_SIZE
 import say.wear.calc.UIConstants.CURSOR_PADDING
 import say.wear.calc.UIConstants.CURSOR_WIDTH
 import say.wear.calc.UIConstants.DISPLAY_HEIGHT
@@ -48,8 +50,11 @@ import say.wear.calc.UIConstants.PREFS_NAME
 import say.wear.calc.UIConstants.RESTORE_TIMEOUT
 import say.wear.calc.UIConstants.ROTATION_THRESHOLD
 import say.wear.calc.UIConstants.SWIPE_RATIO
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.math.sqrt
 
 class MainActivity : ComponentActivity() {
@@ -237,7 +242,11 @@ fun ActiveDisplay(
             isExtended = currentState.isExtended,
             onClick = { input -> onStateChange(reduce(currentState, input)) }
         )
-        CenterDisplay(state = currentState, displayResult = displayResult)
+        CenterDisplay(
+            state = currentState,
+            displayResult = displayResult,
+            onClick = { input -> onStateChange(reduce(currentState, input)) },
+        )
     }
 }
 
@@ -258,7 +267,7 @@ fun AmbientDisplay(displayResult: String) {
 fun CircularNumberPad(
     modifier: Modifier = Modifier,
     onClick: (Input) -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: (Input) -> Unit
 ) {
     CircularPad(
         modifier = modifier,
@@ -266,7 +275,7 @@ fun CircularNumberPad(
         radiusRatio = NUMB_RATIO,
         contentColor = MaterialTheme.colors.primary,
         onClick = onClick,
-        onLongClick = { if (it is Input.Delete) onLongClick() }
+        onLongClick = onLongClick
     )
 }
 
@@ -286,7 +295,11 @@ fun CircularMathPad(
 }
 
 @Composable
-fun CenterDisplay(state: CalcState, displayResult: String) {
+fun CenterDisplay(
+    state: CalcState,
+    displayResult: String,
+    onClick: (Input) -> Unit
+) {
     val density = LocalDensity.current
     val inputScrollState = rememberScrollState()
     val resultScrollState = rememberScrollState()
@@ -320,43 +333,89 @@ fun CenterDisplay(state: CalcState, displayResult: String) {
         }
     }
 
-    Column(modifier = Modifier.height(DISPLAY_HEIGHT).width(DISPLAY_WIDTH)) {
-        Box(
+    ClickableBox(
+        shape = MaterialTheme.shapes.medium,
+        rippleColor = Color.Transparent,
+        onClick = { onClick(Input.Result) }
+    ) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .horizontalScroll(inputScrollState),
-            contentAlignment = Alignment.CenterStart
+                .height(DISPLAY_HEIGHT)
+                .width(DISPLAY_WIDTH)
         ) {
-            MainText(
-                modifier = Modifier.padding(horizontal = CURSOR_PADDING),
-                text = text,
-                onTextLayout = { layoutResult = it }
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .horizontalScroll(inputScrollState),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                MainText(
+                    modifier = Modifier.padding(horizontal = CURSOR_PADDING),
+                    text = text,
+                    onTextLayout = { layoutResult = it }
+                )
 
-            val layout = layoutResult
-            if (layout != null && text.isNotEmpty()) {
-                if (stringCursorIndex <= layout.layoutInput.text.length) {
-                    val cursorRect = runCatching {
-                        layout.getCursorRect(stringCursorIndex)
-                    }.getOrNull()
+                val layout = layoutResult
+                if (layout != null && text.isNotEmpty()) {
+                    if (stringCursorIndex <= layout.layoutInput.text.length) {
+                        val cursorRect = runCatching {
+                            layout.getCursorRect(stringCursorIndex)
+                        }.getOrNull()
 
-                    cursorRect?.let { rect ->
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = CURSOR_PADDING)
-                                .offset { IntOffset(rect.left.toInt(), 0) }
-                                .width(CURSOR_WIDTH)
-                                .height(with(density) { rect.height.toDp() })
-                                .background(MaterialTheme.colors.surface)
-                        )
+                        cursorRect?.let { rect ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = CURSOR_PADDING)
+                                    .offset { IntOffset(rect.left.toInt(), 0) }
+                                    .width(CURSOR_WIDTH)
+                                    .height(with(density) { rect.height.toDp() })
+                                    .background(MaterialTheme.colors.surface)
+                            )
+                        }
                     }
                 }
             }
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(resultScrollState),
+                contentAlignment = Alignment.Center
+            ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
         }
-        Box(
-            modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(resultScrollState),
-            contentAlignment = Alignment.Center
-        ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
+    }
+}
+
+@Composable
+fun CircularPad(
+    modifier: Modifier = Modifier,
+    items: List<Input>,
+    radiusRatio: Float,
+    contentColor: Color,
+    onClick: (Input) -> Unit,
+    onLongClick: ((Input) -> Unit)? = null,
+) {
+    BoxWithConstraints(modifier = modifier.aspectRatio(1f)) {
+        val sizePx = constraints.maxWidth.toFloat()
+        val center = sizePx / 2f
+        val radius = sizePx * radiusRatio
+        val angleStep = (2 * PI) / items.size
+
+        items.forEachIndexed { index, input ->
+            val angle = angleStep * index - PI / 2
+            val x = center + radius * cos(angle).toFloat()
+            val y = center + radius * sin(angle).toFloat()
+
+            ClickableBox(
+                modifier = Modifier
+                    .offset {
+                        IntOffset(
+                            (x - (BUTTON_SIZE / 2).toPx()).toInt(),
+                            (y - (BUTTON_SIZE / 2).toPx()).toInt()
+                        )
+                    }
+                    .size(BUTTON_SIZE),
+                onClick = { onClick(input) },
+                onLongClick = if (input == Input.Delete) { { onLongClick?.invoke(input) } } else null
+            ) { MainText(text = input.toDisplayString(), color = contentColor) }
+        }
     }
 }

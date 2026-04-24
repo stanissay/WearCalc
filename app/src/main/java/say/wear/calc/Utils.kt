@@ -5,6 +5,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.wear.compose.material.Colors
 import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.Shapes
 import androidx.wear.compose.material.Typography
 import kotlinx.serialization.Serializable
 import say.wear.calc.Colors.FirstAccent
@@ -48,15 +50,11 @@ import say.wear.calc.Symbols.SIN
 import say.wear.calc.Symbols.SQRT
 import say.wear.calc.Symbols.TAN
 import say.wear.calc.Symbols.U_MINUS
-import say.wear.calc.UIConstants.BUTTON_SIZE
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
 object UIConstants {
-    val PREFS_NAME = "calc_prefs"
-    val KEY_STATE = "saved_state"
-    val KEY_TIMESTAMP = "saved_timestamp"
+    const val PREFS_NAME = "calc_prefs"
+    const val KEY_STATE = "saved_state"
+    const val KEY_TIMESTAMP = "saved_timestamp"
     val BUTTON_SIZE = 32.dp
     val DISPLAY_HEIGHT = 48.dp
     val DISPLAY_WIDTH = 64.dp
@@ -112,6 +110,12 @@ val ColorStyle = Colors(
     background = SecondBackground,
     surface = GrayColor,
     onBackground = WhiteColor,
+)
+
+val ShapesStyle = Shapes(
+    small = RoundedCornerShape(4.dp),
+    medium = RoundedCornerShape(8.dp),
+    large = RoundedCornerShape(16.dp),
 )
 
 @Serializable
@@ -235,6 +239,7 @@ fun MainTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         typography = TypographyStyle,
         colors = ColorStyle,
+        shapes = ShapesStyle,
         content = content
     )
 }
@@ -258,7 +263,6 @@ fun ClickableBox(
         haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
         onClick()
     }
-
     val wrappedOnLongClick = onLongClick?.let { original ->
         {
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -325,40 +329,4 @@ fun MainText(
         fontSize = fontSize,
         onTextLayout = onTextLayout
     )
-}
-
-@Composable
-fun CircularPad(
-    modifier: Modifier = Modifier,
-    items: List<Input>,
-    radiusRatio: Float,
-    contentColor: Color,
-    onClick: (Input) -> Unit,
-    onLongClick: (Input) -> Unit = {}
-) {
-    BoxWithConstraints(modifier = modifier.aspectRatio(1f)) {
-        val sizePx = constraints.maxWidth.toFloat()
-        val center = sizePx / 2f
-        val radius = sizePx * radiusRatio
-        val angleStep = (2 * PI) / items.size
-
-        items.forEachIndexed { index, input ->
-            val angle = angleStep * index - PI / 2
-            val x = center + radius * cos(angle).toFloat()
-            val y = center + radius * sin(angle).toFloat()
-
-            ClickableBox(
-                modifier = Modifier
-                    .offset {
-                        IntOffset(
-                            (x - (BUTTON_SIZE / 2).toPx()).toInt(),
-                            (y - (BUTTON_SIZE / 2).toPx()).toInt()
-                        )
-                    }
-                    .size(BUTTON_SIZE),
-                onClick = { onClick(input) },
-                onLongClick = { onLongClick(input) }
-            ) { MainText(text = input.toDisplayString(), color = contentColor) }
-        }
-    }
 }
