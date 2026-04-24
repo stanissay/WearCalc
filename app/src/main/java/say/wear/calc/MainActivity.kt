@@ -90,10 +90,10 @@ class MainActivity : ComponentActivity() {
         if (currentTime - lastTime < RESTORE_TIMEOUT) {
             val json = prefs.getString(KEY_STATE, null)
             if (json != null) {
-                try {
-                    state = Json.decodeFromString<CalcState>(json)
+                state = try {
+                    Json.decodeFromString<CalcState>(json)
                 } catch (_: Exception) {
-                    state = CalcState()
+                    CalcState()
                 }
             }
         } else {
