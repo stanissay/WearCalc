@@ -165,7 +165,7 @@ fun CalcScreen(
             onFinish = onFinish
         )
     } else {
-        AmbientDisplay(displayResult)
+        AmbientDisplay(displayResult = displayResult.ifBlank { currentState.tokens.toDisplayString() })
     }
 }
 
