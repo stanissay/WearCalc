@@ -1,5 +1,7 @@
 package say.wear.calc
 
+import android.app.Activity
+import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -25,10 +27,12 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.wear.ambient.AmbientLifecycleObserver
 import androidx.wear.compose.material.MaterialTheme
+import kotlinx.serialization.json.Json
 import say.wear.calc.UIConstants.ACCELERATION_DELAY
 import say.wear.calc.UIConstants.ACCELERATION_THRESHOLD
 import say.wear.calc.UIConstants.AMBIENT_SIZE
@@ -36,175 +40,217 @@ import say.wear.calc.UIConstants.CURSOR_PADDING
 import say.wear.calc.UIConstants.CURSOR_WIDTH
 import say.wear.calc.UIConstants.DISPLAY_HEIGHT
 import say.wear.calc.UIConstants.DISPLAY_WIDTH
+import say.wear.calc.UIConstants.KEY_STATE
+import say.wear.calc.UIConstants.KEY_TIMESTAMP
 import say.wear.calc.UIConstants.MATH_RATIO
 import say.wear.calc.UIConstants.NUMB_RATIO
+import say.wear.calc.UIConstants.PREFS_NAME
+import say.wear.calc.UIConstants.RESTORE_TIMEOUT
 import say.wear.calc.UIConstants.ROTATION_THRESHOLD
 import say.wear.calc.UIConstants.SWIPE_RATIO
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.sqrt
 
 class MainActivity : ComponentActivity() {
+    private var state by mutableStateOf(CalcState())
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        restoreState()
         setTheme(android.R.style.Theme_DeviceDefault)
         setContent {
             MainTheme {
-                val context = LocalContext.current
-                val haptic = LocalHapticFeedback.current
-                val configuration = LocalConfiguration.current
-                val density = LocalDensity.current
-                val lifecycleOwner = LocalLifecycleOwner.current
-                val focusRequester = remember { FocusRequester() }
-                var rotationAccumulator = 0f
-                val thresholdPx = with(density) { (configuration.screenWidthDp * SWIPE_RATIO).dp.toPx() }
-                var totalDragDistanceX by remember { mutableFloatStateOf(0f) }
-                var totalDragDistanceY by remember { mutableFloatStateOf(0f) }
-                var isSwipeHandled by remember { mutableStateOf(false) }
-                val ambientState = remember { mutableStateOf(false) }
-                var state by remember { mutableStateOf(CalcState()) }
-                val displayResult by remember(state.tokens) {
-                    derivedStateOf {
-                        evaluate(state.tokens)
-                    }
-                }
-
-                DisposableEffect(lifecycleOwner) {
-                    val observer = AmbientLifecycleObserver(
-                        activity = this@MainActivity,
-                        callbacks = object : AmbientLifecycleObserver.AmbientLifecycleCallback {
-                            override fun onEnterAmbient(ambientDetails: AmbientLifecycleObserver.AmbientDetails) {
-                                ambientState.value = true
-                            }
-                            override fun onExitAmbient() {
-                                ambientState.value = false
-                            }
-                            override fun onUpdateAmbient() {}
-                        }
-                    )
-
-                    lifecycleOwner.lifecycle.addObserver(observer)
-
-                    onDispose {
-                        lifecycleOwner.lifecycle.removeObserver(observer)
-                    }
-                }
-
-                DisposableEffect(Unit) {
-                    val sensorManager = context.getSystemService(SENSOR_SERVICE) as SensorManager
-                    val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-                    var lastShakeTime = 0L
-
-                    val sensorListener = object : SensorEventListener {
-                        override fun onSensorChanged(event: SensorEvent?) {
-                            if (event == null) return
-                            val x = event.values[0]
-                            val y = event.values[1]
-                            val z = event.values[2]
-                            val acceleration = sqrt(x * x + y * y + z * z) - SensorManager.GRAVITY_EARTH
-
-                            if (acceleration > ACCELERATION_THRESHOLD && !state.tokens.isEmpty()) {
-                                val currentTime = System.currentTimeMillis()
-                                if (currentTime - lastShakeTime > ACCELERATION_DELAY) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.Confirm)
-                                    state = CalcState()
-                                    lastShakeTime = currentTime
-                                }
-                            }
-                        }
-
-                        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-                    }
-
-                    if (accelerometer != null) sensorManager.registerListener(sensorListener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
-
-                    onDispose {
-                        if (accelerometer != null) sensorManager.unregisterListener(sensorListener)
-                    }
-                }
-
-                LaunchedEffect(Unit) {
-                    focusRequester.requestFocus()
-                }
-
-                if(!ambientState.value) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colors.background)
-                            .pointerInput(Unit) {
-                                detectDragGestures(
-                                    onDragStart = {
-                                        totalDragDistanceX = 0f
-                                        totalDragDistanceY = 0f
-                                        isSwipeHandled = false
-                                    },
-                                    onDrag = { change, dragAmount ->
-                                        if (isSwipeHandled) return@detectDragGestures
-                                        totalDragDistanceX += dragAmount.x
-                                        totalDragDistanceY += dragAmount.y
-
-                                        if (abs(totalDragDistanceX) > thresholdPx || abs(totalDragDistanceY) > thresholdPx) {
-                                            if (abs(totalDragDistanceX) > abs(totalDragDistanceY)) {
-                                                if (totalDragDistanceX < -thresholdPx) {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                                    state = reduce(state, Input.Delete)
-                                                    isSwipeHandled = true
-                                                    change.consume()
-                                                } else if(totalDragDistanceX > thresholdPx) {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOff)
-                                                    this@MainActivity.finish()
-                                                    isSwipeHandled = true
-                                                    change.consume()
-                                                }
-                                            } else {
-                                                if (totalDragDistanceY < -thresholdPx) {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
-                                                    state = state.copy(isExtended = !state.isExtended)
-                                                    isSwipeHandled = true
-                                                    change.consume()
-                                                }
-                                            }
-                                        }
-                                    }
-                                )
-                            }
-                            .onRotaryScrollEvent { rotaryEvent ->
-                                rotationAccumulator += rotaryEvent.verticalScrollPixels
-                                if (abs(rotationAccumulator) >= ROTATION_THRESHOLD) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                    val direction = if (rotationAccumulator > 0) 1 else -1
-                                    state = moveCursor(state, direction)
-                                    rotationAccumulator = 0f
-                                }
-                                true
-                            }
-                            .focusRequester(focusRequester)
-                            .focusable(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularNumberPad(
-                            modifier = Modifier,
-                            onClick = { input -> state = reduce(state, input) },
-                            onLongClick = { state = CalcState() }
-                        )
-                        CircularMathPad(
-                            modifier = Modifier,
-                            isExtended = state.isExtended,
-                            onClick = { input -> state = reduce(state, input) }
-                        )
-                        CenterDisplay(state = state, displayResult = displayResult)
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colors.background),
-                        contentAlignment = Alignment.Center
-                    ) { AmbientDisplay(displayResult) }
-                }
+                CalcScreen(
+                    state = state,
+                    onStateChange = { newState -> state = newState },
+                    onFinish = { finish() }
+                )
             }
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val json = Json.encodeToString(state)
+
+        prefs.edit {
+            putString(KEY_STATE, json)
+            putLong(KEY_TIMESTAMP, System.currentTimeMillis())
+        }
+    }
+
+    private fun restoreState() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val lastTime = prefs.getLong(KEY_TIMESTAMP, 0L)
+        val currentTime = System.currentTimeMillis()
+
+        if (currentTime - lastTime < RESTORE_TIMEOUT) {
+            val json = prefs.getString(KEY_STATE, null)
+            if (json != null) {
+                try {
+                    state = Json.decodeFromString<CalcState>(json)
+                } catch (_: Exception) {
+                    state = CalcState()
+                }
+            }
+        } else {
+            state = CalcState()
+        }
+    }
+}
+
+@Composable
+fun CalcScreen(
+    state: CalcState,
+    onStateChange: (CalcState) -> Unit,
+    onFinish: () -> Unit
+) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentState by rememberUpdatedState(state)
+    val ambientState = remember { mutableStateOf(false) }
+    val displayResult by remember(currentState.tokens) { derivedStateOf { evaluate(currentState.tokens) } }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = AmbientLifecycleObserver(
+            context as Activity,
+            callbacks = object : AmbientLifecycleObserver.AmbientLifecycleCallback {
+                override fun onEnterAmbient(ambientDetails: AmbientLifecycleObserver.AmbientDetails) { ambientState.value = true }
+                override fun onExitAmbient() { ambientState.value = false }
+                override fun onUpdateAmbient() {}
+            }
+        )
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    DisposableEffect(Unit) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        var lastShakeTime = 0L
+
+        val listener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent?) {
+                if (event == null) return
+                val accel = sqrt(event.values[0].pow(2) + event.values[1].pow(2) + event.values[2].pow(2)) - SensorManager.GRAVITY_EARTH
+                if (accel > ACCELERATION_THRESHOLD && currentState.tokens.isNotEmpty()) {
+                    val currentTime = System.currentTimeMillis()
+                    if (currentTime - lastShakeTime > ACCELERATION_DELAY) {
+                        haptic.performHapticFeedback(HapticFeedbackType.Confirm)
+                        onStateChange(CalcState())
+                        lastShakeTime = currentTime
+                    }
+                }
+            }
+            override fun onAccuracyChanged(s: Sensor?, a: Int) {}
+        }
+        sensorManager.registerListener(listener, accelerometer, SensorManager.SENSOR_DELAY_NORMAL)
+        onDispose { sensorManager.unregisterListener(listener) }
+    }
+
+    if (!ambientState.value) {
+        ActiveDisplay(
+            state = state,
+            displayResult = displayResult,
+            onStateChange = onStateChange,
+            onFinish = onFinish
+        )
+    } else {
+        AmbientDisplay(displayResult)
+    }
+}
+
+@Composable
+fun ActiveDisplay(
+    state: CalcState,
+    displayResult: String,
+    onStateChange: (CalcState) -> Unit,
+    onFinish: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val currentState by rememberUpdatedState(state)
+    val focusRequester = remember { FocusRequester() }
+    val thresholdPx = with(density) { (configuration.screenWidthDp * SWIPE_RATIO).dp.toPx() }
+    var rotationAccumulator = 0f
+    var totalDragDistanceX by remember { mutableFloatStateOf(0f) }
+    var totalDragDistanceY by remember { mutableFloatStateOf(0f) }
+    var isSwipeHandled by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colors.background)
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { totalDragDistanceX = 0f; totalDragDistanceY = 0f; isSwipeHandled = false },
+                    onDrag = { change, dragAmount ->
+                        if (isSwipeHandled) return@detectDragGestures
+                        totalDragDistanceX += dragAmount.x
+                        totalDragDistanceY += dragAmount.y
+
+                        if (abs(totalDragDistanceX) > thresholdPx || abs(totalDragDistanceY) > thresholdPx) {
+                            isSwipeHandled = true
+                            change.consume()
+
+                            if (abs(totalDragDistanceX) > abs(totalDragDistanceY)) {
+                                if (totalDragDistanceX < -thresholdPx) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                    onStateChange(reduce(currentState, Input.Delete))
+                                } else if (totalDragDistanceX > thresholdPx) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOff)
+                                    onFinish()
+                                }
+                            } else if (totalDragDistanceY < -thresholdPx) {
+                                haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                                onStateChange(currentState.copy(isExtended = !currentState.isExtended))
+                            }
+                        }
+                    }
+                )
+            }
+            .onRotaryScrollEvent { rotaryEvent ->
+                rotationAccumulator += rotaryEvent.verticalScrollPixels
+                if (abs(rotationAccumulator) >= ROTATION_THRESHOLD) {
+                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    onStateChange(moveCursor(currentState, if (rotationAccumulator > 0) 1 else -1))
+                    rotationAccumulator = 0f
+                }
+                true
+            }
+            .focusRequester(focusRequester)
+            .focusable(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularNumberPad(
+            onClick = { input -> onStateChange(reduce(currentState, input)) },
+            onLongClick = { onStateChange(CalcState()) }
+        )
+        CircularMathPad(
+            isExtended = currentState.isExtended,
+            onClick = { input -> onStateChange(reduce(currentState, input)) }
+        )
+        CenterDisplay(state = currentState, displayResult = displayResult)
+    }
+}
+
+@Composable
+fun AmbientDisplay(displayResult: String) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier.size(AMBIENT_SIZE),
+            contentAlignment = Alignment.Center
+        ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
     }
 }
 
@@ -313,12 +359,4 @@ fun CenterDisplay(state: CalcState, displayResult: String) {
             contentAlignment = Alignment.Center
         ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
     }
-}
-
-@Composable
-fun AmbientDisplay(displayResult: String) {
-    Box(
-        modifier = Modifier.size(AMBIENT_SIZE),
-        contentAlignment = Alignment.Center
-    ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
 }

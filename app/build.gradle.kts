@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
+    kotlin("plugin.serialization") version "2.0.0"
 }
 
 android {
@@ -14,7 +15,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = 1
-        versionName = "1.1.1"
+        versionName = "1.1.2"
     }
 
     buildTypes {
@@ -57,4 +58,5 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("androidx.compose.material3:material3:1.4.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 }

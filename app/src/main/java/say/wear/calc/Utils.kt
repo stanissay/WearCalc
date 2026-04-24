@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.*
 import androidx.wear.compose.material.Colors
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Typography
+import kotlinx.serialization.Serializable
 import say.wear.calc.Colors.FirstAccent
 import say.wear.calc.Colors.GrayColor
 import say.wear.calc.Colors.SecondAccent
@@ -53,6 +54,9 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 object UIConstants {
+    val PREFS_NAME = "calc_prefs"
+    val KEY_STATE = "saved_state"
+    val KEY_TIMESTAMP = "saved_timestamp"
     val BUTTON_SIZE = 32.dp
     val DISPLAY_HEIGHT = 48.dp
     val DISPLAY_WIDTH = 64.dp
@@ -65,6 +69,7 @@ object UIConstants {
     const val ACCELERATION_THRESHOLD = 12f
     const val ACCELERATION_DELAY = 1000
     const val SWIPE_RATIO = 0.4f
+    const val RESTORE_TIMEOUT = 5 * 60 * 1000   // 5 minutes
 }
 
 object Colors {
@@ -109,20 +114,26 @@ val ColorStyle = Colors(
     onBackground = WhiteColor,
 )
 
+@Serializable
 data class CalcState(
     val tokens: List<Token> = emptyList(),
     val cursor: Cursor = Cursor(0, 0),
     val isExtended: Boolean = false
 )
 
+@Serializable
 data class Cursor(
     val tokenIndex: Int,
     val offset: Int = 0
 )
 
+@Serializable
 sealed class Token {
+    @Serializable
     data class Number(val value: String) : Token()
+    @Serializable
     data class Operator(val symbol: String) : Token()
+    @Serializable
     data class Function(val name: String) : Token()
     object UnaryMinus : Token()
     object LeftParen : Token()
@@ -130,9 +141,13 @@ sealed class Token {
     object Percent : Token()
 }
 
+@Serializable
 sealed class Input {
+    @Serializable
     data class Digit(val value: String) : Input()
+    @Serializable
     data class Operator(val symbol: String) : Input()
+    @Serializable
     data class Function(val name: String) : Input()
     object Result : Input()
     object Extended: Input()
