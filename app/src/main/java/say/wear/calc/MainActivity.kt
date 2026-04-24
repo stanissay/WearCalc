@@ -402,25 +402,25 @@ fun CenterDisplay(
                     }
                 }
             }
-            AnimatedContent(
-                targetState = displayResult,
-                transitionSpec = {
-                    if (targetState.isBlank()) {
-                        (fadeIn(animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
-                                scaleIn(initialScale = 1f, animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing))) togetherWith
-                                (fadeOut(animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
-                                scaleOut(targetScale = 0.9f, animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)))
-                    } else {
-                        scaleIn(animationSpec = tween(TEXT_ANIMATION_DURATION), initialScale = 0.9f) + fadeIn(tween(TEXT_ANIMATION_DURATION)) togetherWith
-                                scaleOut(animationSpec = tween(TEXT_ANIMATION_DURATION), targetScale = 1f) + fadeOut(tween(TEXT_ANIMATION_DURATION))
-                    }
-                },
-                label = "clearAnimation"
-            ) { text ->
-                Box(
-                    modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(resultScrollState),
-                    contentAlignment = Alignment.Center
-                ) { MainText(text = text, maxLines = Int.MAX_VALUE) }
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(resultScrollState),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedContent(
+                    targetState = displayResult,
+                    transitionSpec = {
+                        if (targetState.isBlank()) {
+                            (fadeIn(animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
+                                    scaleIn(initialScale = 1f, animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing))) togetherWith
+                                    (fadeOut(animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
+                                            scaleOut(targetScale = 0.9f, animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)))
+                        } else {
+                            scaleIn(animationSpec = tween(TEXT_ANIMATION_DURATION), initialScale = 0.9f) + fadeIn(tween(TEXT_ANIMATION_DURATION)) togetherWith
+                                    scaleOut(animationSpec = tween(TEXT_ANIMATION_DURATION), targetScale = 1f) + fadeOut(tween(TEXT_ANIMATION_DURATION))
+                        }
+                    },
+                    label = "clearAnimation"
+                ) { text -> MainText(text = text, maxLines = Int.MAX_VALUE) }
             }
         }
     }
