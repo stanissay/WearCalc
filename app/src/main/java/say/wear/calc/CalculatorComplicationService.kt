@@ -22,7 +22,7 @@ class CalculatorComplicationService : SuspendingComplicationDataSourceService() 
 
         return SmallImageComplicationData.Builder(
             smallImage = SmallImage.Builder(
-                image = Icon.createWithResource(this, R.drawable.calculator),
+                image = Icon.createWithResource(this, R.drawable.calculator_vector),
                 type = SmallImageType.PHOTO
             ).build(),
             contentDescription = PlainComplicationText.Builder("Open Calculator").build()
@@ -34,7 +34,7 @@ class CalculatorComplicationService : SuspendingComplicationDataSourceService() 
     override fun getPreviewData(type: ComplicationType): ComplicationData {
         return SmallImageComplicationData.Builder(
             smallImage = SmallImage.Builder(
-                image = Icon.createWithResource(this, R.drawable.calculator),
+                image = Icon.createWithResource(this, R.drawable.calculator_vector),
                 type = SmallImageType.PHOTO
             ).build(),
             contentDescription = PlainComplicationText.Builder("Preview").build()

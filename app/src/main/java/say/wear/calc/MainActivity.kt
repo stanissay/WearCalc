@@ -160,15 +160,16 @@ class MainActivity : ComponentActivity() {
                                                     haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
                                                     state = reduce(state, Input.Delete)
                                                     isSwipeHandled = true
+                                                    change.consume()
                                                 }
                                             } else {
                                                 if (totalDragDistanceY < -thresholdPx) {
                                                     haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
                                                     state = state.copy(isExtended = !state.isExtended)
                                                     isSwipeHandled = true
+                                                    change.consume()
                                                 }
                                             }
-                                            change.consume()
                                         }
                                     }
                                 )
