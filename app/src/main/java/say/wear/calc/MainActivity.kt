@@ -139,16 +139,6 @@ class MainActivity : ComponentActivity() {
                                         totalDragDistanceY = 0f
                                         isSwipeHandled = false
                                     },
-                                    onDragEnd = {
-                                        totalDragDistanceX = 0f
-                                        totalDragDistanceY = 0f
-                                        isSwipeHandled = false
-                                    },
-                                    onDragCancel = {
-                                        totalDragDistanceX = 0f
-                                        totalDragDistanceY = 0f
-                                        isSwipeHandled = false
-                                    },
                                     onDrag = { change, dragAmount ->
                                         if (isSwipeHandled) return@detectDragGestures
                                         totalDragDistanceX += dragAmount.x
@@ -161,10 +151,15 @@ class MainActivity : ComponentActivity() {
                                                     state = reduce(state, Input.Delete)
                                                     isSwipeHandled = true
                                                     change.consume()
+                                                } else if(totalDragDistanceX > thresholdPx) {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOff)
+                                                    this@MainActivity.finish()
+                                                    isSwipeHandled = true
+                                                    change.consume()
                                                 }
                                             } else {
                                                 if (totalDragDistanceY < -thresholdPx) {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                    haptic.performHapticFeedback(HapticFeedbackType.ToggleOn)
                                                     state = state.copy(isExtended = !state.isExtended)
                                                     isSwipeHandled = true
                                                     change.consume()
