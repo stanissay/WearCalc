@@ -7,6 +7,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
@@ -78,23 +79,36 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        restoreState()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        saveState()
+    }
+
     override fun onStop() {
         super.onStop()
+        saveState()
+    }
+
+    private fun saveState() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val json = Json.encodeToString(state)
 
         prefs.edit {
             putString(KEY_STATE, json)
-            putLong(KEY_TIMESTAMP, System.currentTimeMillis())
+            putLong(KEY_TIMESTAMP, SystemClock.elapsedRealtime())
         }
     }
 
     private fun restoreState() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val lastTime = prefs.getLong(KEY_TIMESTAMP, 0L)
-        val currentTime = System.currentTimeMillis()
 
-        if (currentTime - lastTime < RESTORE_TIMEOUT) {
+        if (SystemClock.elapsedRealtime() - lastTime < RESTORE_TIMEOUT) {
             val json = prefs.getString(KEY_STATE, null)
             if (json != null) {
                 state = try {
