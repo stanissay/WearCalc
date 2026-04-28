@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  */
 
-package say.wear.calc
+package stanissay.wear.calc
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -48,28 +48,28 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Shapes
 import androidx.wear.compose.material.Typography
 import kotlinx.serialization.Serializable
-import say.wear.calc.Colors.FirstAccent
-import say.wear.calc.Colors.GrayColor
-import say.wear.calc.Colors.SecondAccent
-import say.wear.calc.Colors.SecondBackground
-import say.wear.calc.Colors.WhiteColor
-import say.wear.calc.Symbols.COS
-import say.wear.calc.Symbols.DELETE
-import say.wear.calc.Symbols.DIV
-import say.wear.calc.Symbols.DOT
-import say.wear.calc.Symbols.EXT
-import say.wear.calc.Symbols.L_PAREN
-import say.wear.calc.Symbols.MINUS
-import say.wear.calc.Symbols.MULTI
-import say.wear.calc.Symbols.PER
-import say.wear.calc.Symbols.PLUS
-import say.wear.calc.Symbols.POW
-import say.wear.calc.Symbols.RES
-import say.wear.calc.Symbols.R_PAREN
-import say.wear.calc.Symbols.SIN
-import say.wear.calc.Symbols.SQRT
-import say.wear.calc.Symbols.TAN
-import say.wear.calc.Symbols.U_MINUS
+import stanissay.wear.calc.Colors.FirstAccent
+import stanissay.wear.calc.Colors.GrayColor
+import stanissay.wear.calc.Colors.SecondAccent
+import stanissay.wear.calc.Colors.SecondBackground
+import stanissay.wear.calc.Colors.WhiteColor
+import stanissay.wear.calc.Symbols.COS
+import stanissay.wear.calc.Symbols.DELETE
+import stanissay.wear.calc.Symbols.DIV
+import stanissay.wear.calc.Symbols.DOT
+import stanissay.wear.calc.Symbols.EXT
+import stanissay.wear.calc.Symbols.L_PAREN
+import stanissay.wear.calc.Symbols.MINUS
+import stanissay.wear.calc.Symbols.MULTI
+import stanissay.wear.calc.Symbols.PER
+import stanissay.wear.calc.Symbols.PLUS
+import stanissay.wear.calc.Symbols.POW
+import stanissay.wear.calc.Symbols.RES
+import stanissay.wear.calc.Symbols.R_PAREN
+import stanissay.wear.calc.Symbols.SIN
+import stanissay.wear.calc.Symbols.SQRT
+import stanissay.wear.calc.Symbols.TAN
+import stanissay.wear.calc.Symbols.U_MINUS
 
 object UIConstants {
     const val PREFS_NAME = "calc_prefs"

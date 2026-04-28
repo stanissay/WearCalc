@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  */
 
-package say.wear.calc
+package stanissay.wear.calc
 
 import android.app.Activity
 import android.content.Context
@@ -54,25 +54,25 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.wear.ambient.AmbientLifecycleObserver
 import androidx.wear.compose.material.MaterialTheme
 import kotlinx.serialization.json.Json
-import say.wear.calc.UIConstants.ACCELERATION_DELAY
-import say.wear.calc.UIConstants.ACCELERATION_THRESHOLD
-import say.wear.calc.UIConstants.AMBIENT_SIZE
-import say.wear.calc.UIConstants.BUTTON_SIZE
-import say.wear.calc.UIConstants.CURSOR_PADDING
-import say.wear.calc.UIConstants.CURSOR_WIDTH
-import say.wear.calc.UIConstants.DISPLAY_HEIGHT
-import say.wear.calc.UIConstants.DISPLAY_WIDTH
-import say.wear.calc.UIConstants.KEY_STATE
-import say.wear.calc.UIConstants.KEY_TIMESTAMP
-import say.wear.calc.UIConstants.MATH_RATIO
-import say.wear.calc.UIConstants.NUMB_RATIO
-import say.wear.calc.UIConstants.PAD_ANIMATION_DURATION
-import say.wear.calc.UIConstants.PREFS_NAME
-import say.wear.calc.UIConstants.RESTORE_TIMEOUT
-import say.wear.calc.UIConstants.ROTATION_THRESHOLD
-import say.wear.calc.UIConstants.SCREEN_ANIMATION_DURATION
-import say.wear.calc.UIConstants.SWIPE_RATIO
-import say.wear.calc.UIConstants.TEXT_ANIMATION_DURATION
+import stanissay.wear.calc.UIConstants.ACCELERATION_DELAY
+import stanissay.wear.calc.UIConstants.ACCELERATION_THRESHOLD
+import stanissay.wear.calc.UIConstants.AMBIENT_SIZE
+import stanissay.wear.calc.UIConstants.BUTTON_SIZE
+import stanissay.wear.calc.UIConstants.CURSOR_PADDING
+import stanissay.wear.calc.UIConstants.CURSOR_WIDTH
+import stanissay.wear.calc.UIConstants.DISPLAY_HEIGHT
+import stanissay.wear.calc.UIConstants.DISPLAY_WIDTH
+import stanissay.wear.calc.UIConstants.KEY_STATE
+import stanissay.wear.calc.UIConstants.KEY_TIMESTAMP
+import stanissay.wear.calc.UIConstants.MATH_RATIO
+import stanissay.wear.calc.UIConstants.NUMB_RATIO
+import stanissay.wear.calc.UIConstants.PAD_ANIMATION_DURATION
+import stanissay.wear.calc.UIConstants.PREFS_NAME
+import stanissay.wear.calc.UIConstants.RESTORE_TIMEOUT
+import stanissay.wear.calc.UIConstants.ROTATION_THRESHOLD
+import stanissay.wear.calc.UIConstants.SCREEN_ANIMATION_DURATION
+import stanissay.wear.calc.UIConstants.SWIPE_RATIO
+import stanissay.wear.calc.UIConstants.TEXT_ANIMATION_DURATION
 import kotlin.math.*
 
 class MainActivity : ComponentActivity() {

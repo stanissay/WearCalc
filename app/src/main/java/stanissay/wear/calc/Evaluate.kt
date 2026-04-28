@@ -13,21 +13,21 @@
  * GNU General Public License for more details.
  */
 
-package say.wear.calc
+package stanissay.wear.calc
 
-import say.wear.calc.Symbols.COS
-import say.wear.calc.Symbols.DIV
-import say.wear.calc.Symbols.HUN
-import say.wear.calc.Symbols.INF
-import say.wear.calc.Symbols.MINUS
-import say.wear.calc.Symbols.MULTI
-import say.wear.calc.Symbols.PER
-import say.wear.calc.Symbols.PLUS
-import say.wear.calc.Symbols.POW
-import say.wear.calc.Symbols.SIN
-import say.wear.calc.Symbols.SQRT
-import say.wear.calc.Symbols.TAN
-import say.wear.calc.Symbols.U_MINUS
+import stanissay.wear.calc.Symbols.COS
+import stanissay.wear.calc.Symbols.DIV
+import stanissay.wear.calc.Symbols.HUN
+import stanissay.wear.calc.Symbols.INF
+import stanissay.wear.calc.Symbols.MINUS
+import stanissay.wear.calc.Symbols.MULTI
+import stanissay.wear.calc.Symbols.PER
+import stanissay.wear.calc.Symbols.PLUS
+import stanissay.wear.calc.Symbols.POW
+import stanissay.wear.calc.Symbols.SIN
+import stanissay.wear.calc.Symbols.SQRT
+import stanissay.wear.calc.Symbols.TAN
+import stanissay.wear.calc.Symbols.U_MINUS
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.pow

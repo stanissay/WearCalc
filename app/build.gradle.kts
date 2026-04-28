@@ -9,13 +9,13 @@ plugins {
 }
 
 android {
-    namespace = "say.wear.calc"
+    namespace = "stanissay.wear.calc"
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
-        applicationId = "say.wear.calc"
+        applicationId = "stanissay.wear.calc"
         minSdk = 33
         targetSdk = 36
         versionCode = 1

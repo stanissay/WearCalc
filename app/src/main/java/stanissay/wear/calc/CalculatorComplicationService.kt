@@ -13,7 +13,7 @@
  * GNU General Public License for more details.
  */
 
-package say.wear.calc
+package stanissay.wear.calc
 
 import android.app.PendingIntent
 import android.content.Intent

@@ -13,10 +13,10 @@
  * GNU General Public License for more details.
  */
 
-package say.wear.calc
+package stanissay.wear.calc
 
-import say.wear.calc.Symbols.DOT
-import say.wear.calc.Symbols.MINUS
+import stanissay.wear.calc.Symbols.DOT
+import stanissay.wear.calc.Symbols.MINUS
 
 fun reduce(state: CalcState, input: Input): CalcState {
     return when (input) {
