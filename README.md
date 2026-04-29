@@ -1,4 +1,6 @@
-# Round Calculator for Wear OS
+# WearCalc
+
+## Round Calculator for Wear OS
 
 ![Logo](assets/logo.png)
 
