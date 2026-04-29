@@ -257,6 +257,10 @@ fun Input.toDisplayString(): String = when (this) {
     is Input.Percent -> PER
 }
 
+fun isMinus(token: Token?): Boolean {
+    return (token is Token.Operator && token.symbol == MINUS) || (token is Token.UnaryMinus)
+}
+
 @Composable
 fun MainTheme(content: @Composable () -> Unit) {
     MaterialTheme(

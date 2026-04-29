@@ -27,7 +27,7 @@ import androidx.wear.watchface.complications.datasource.ComplicationRequest
 import androidx.wear.watchface.complications.datasource.SuspendingComplicationDataSourceService
 import androidx.wear.watchface.complications.data.ComplicationData
 
-class CalculatorComplicationService : SuspendingComplicationDataSourceService() {
+class ComplicationService : SuspendingComplicationDataSourceService() {
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData {
         val intent = Intent(this, MainActivity::class.java)

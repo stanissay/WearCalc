@@ -42,11 +42,16 @@ private fun inputDigit(state: CalcState, input: Input.Digit): CalcState {
         val (numIndex, numToken) = numberInfo
         val currentOffset = if (numIndex == index) offset else numToken.value.length
         val newValue = numToken.value.substring(0, currentOffset) + input.value + numToken.value.substring(currentOffset)
+
         tokens[numIndex] = numToken.copy(value = newValue)
+        normalizeTokens(tokens)
+
         return state.copy(tokens = tokens, cursor = Cursor(numIndex, currentOffset + 1))
     }
 
     tokens.add(index, Token.Number(input.value))
+    normalizeTokens(tokens)
+
     return state.copy(tokens = tokens, cursor = Cursor(index + 1, input.value.length))
 }
 
@@ -54,6 +59,14 @@ private fun inputOperator(state: CalcState, input: Input.Operator): CalcState {
     val tokens = state.tokens.toMutableList()
     val (index, offset) = state.cursor
     val symbol = input.symbol
+
+    if (symbol == MINUS) {
+        val prevToken = tokens.getOrNull(index - 1)
+        val nextToken = tokens.getOrNull(index)
+
+        if (isMinus(prevToken) || isMinus(nextToken)) return state
+    }
+
     val tokenUnderCursor = tokens.getOrNull(index)
     val isInsideNumber = (tokenUnderCursor is Token.Number && offset > 0)
     val isAtStartOfExpression = (index == 0 && offset == 0)
@@ -78,6 +91,7 @@ private fun inputOperator(state: CalcState, input: Input.Operator): CalcState {
 
         tokens.removeAt(numIndex)
         tokens.addAll(numIndex, newParts)
+        normalizeTokens(tokens)
 
         return state.copy(
             tokens = tokens,
@@ -88,10 +102,14 @@ private fun inputOperator(state: CalcState, input: Input.Operator): CalcState {
 
     if (prevToken is Token.Operator && tokenToInsert !is Token.UnaryMinus) {
         tokens[index - 1] = tokenToInsert
+        normalizeTokens(tokens)
+
         return state.copy(tokens = tokens, isExtended = false)
     }
 
     tokens.add(index, tokenToInsert)
+    normalizeTokens(tokens)
+
     return state.copy(tokens = tokens, cursor = Cursor(index + 1, 0), isExtended = false)
 }
 
@@ -103,6 +121,7 @@ private fun inputFunction(state: CalcState, input: Input.Function): CalcState {
     if (!canInsert) return state
 
     tokens.add(index, Token.Function(input.name))
+    normalizeTokens(tokens)
 
     return state.copy(
         tokens = tokens,
@@ -138,10 +157,14 @@ private fun inputDot(state: CalcState): CalcState {
         val currentOffset = if (numIndex == index) offset else numToken.value.length
         val newValue = numToken.value.substring(0, currentOffset) + DOT + numToken.value.substring(currentOffset)
         tokens[numIndex] = numToken.copy(value = newValue)
+        normalizeTokens(tokens)
+
         return state.copy(tokens = tokens, cursor = Cursor(numIndex, currentOffset + 1))
     }
 
     tokens.add(index, Token.Number("0$DOT"))
+    normalizeTokens(tokens)
+
     return state.copy(tokens = tokens, cursor = Cursor(index + 1, 2))
 }
 
@@ -172,11 +195,14 @@ private fun deleteChar(state: CalcState, token: Token.Number, index: Int): CalcS
 
     if (newValue.isNotEmpty()) {
         tokens[index] = token.copy(value = newValue)
+        normalizeTokens(tokens)
+
         return state.copy(tokens = tokens, cursor = Cursor(index, offset - 1))
     }
 
     tokens.removeAt(index)
     val newIndex = index.coerceAtMost(tokens.size)
+    normalizeTokens(tokens)
 
     return state.copy(
         tokens = tokens,
@@ -186,11 +212,33 @@ private fun deleteChar(state: CalcState, token: Token.Number, index: Int): CalcS
 
 private fun deleteToken(state: CalcState, indexToRemove: Int): CalcState {
     if (indexToRemove !in state.tokens.indices) return state
+
     val tokens = state.tokens.toMutableList()
     tokens.removeAt(indexToRemove)
+
+    if (indexToRemove > 0 && indexToRemove < tokens.size) {
+        val left = tokens[indexToRemove - 1]
+        val right = tokens[indexToRemove]
+
+        if (left is Token.Number && right is Token.Number) {
+            val mergedValue = left.value + right.value
+            val mergedToken = Token.Number(mergedValue)
+
+            tokens[indexToRemove - 1] = mergedToken
+            tokens.removeAt(indexToRemove)
+            normalizeTokens(tokens)
+
+            return state.copy(
+                tokens = tokens,
+                cursor = Cursor(indexToRemove - 1, left.value.length)
+            )
+        }
+    }
+
     val newIndex = indexToRemove.coerceAtMost(tokens.size)
     val token = tokens.getOrNull(newIndex - 1)
     val newOffset = if (token is Token.Number) token.value.length else 0
+    normalizeTokens(tokens)
 
     return state.copy(
         tokens = tokens,
@@ -206,6 +254,7 @@ private fun inputLeftParen(state: CalcState): CalcState {
     if (!canInsert) return state
 
     tokens.add(index, Token.LeftParen)
+    normalizeTokens(tokens)
 
     return state.copy(
         tokens = tokens,
@@ -233,6 +282,7 @@ private fun inputRightParen(state: CalcState): CalcState {
 
         tokens.removeAt(numIndex)
         tokens.addAll(numIndex, newParts)
+        normalizeTokens(tokens)
 
         return state.copy(
             tokens = tokens,
@@ -241,6 +291,7 @@ private fun inputRightParen(state: CalcState): CalcState {
     }
 
     tokens.add(index, Token.RightParen)
+    normalizeTokens(tokens)
 
     return state.copy(
         tokens = tokens,
@@ -256,6 +307,7 @@ private fun inputPercent(state: CalcState): CalcState {
     val insertIndex = numIndex + 1
 
     tokens.add(insertIndex, Token.Percent)
+    normalizeTokens(tokens)
 
     return state.copy(
         tokens = tokens,
@@ -316,6 +368,23 @@ private fun canInsertRightParen(tokens: List<Token>, index: Int, offset: Int): B
             prevToken is Token.RightParen ||
             prevToken is Token.LeftParen ||
             prevToken is Token.Percent
+}
+
+private fun normalizeTokens(tokens: MutableList<Token>) {
+    if (tokens.isNotEmpty() && tokens[0] is Token.Operator && (tokens[0] as Token.Operator).symbol == MINUS) {
+        tokens[0] = Token.UnaryMinus
+    }
+
+    for (i in 1 until tokens.size) {
+        val prev = tokens[i - 1]
+        val current = tokens[i]
+
+        if (current is Token.UnaryMinus && (prev is Token.Number || prev is Token.RightParen)) {
+            tokens[i] = Token.Operator(MINUS)
+        } else if (current is Token.Operator && current.symbol == MINUS && (prev is Token.Operator || prev is Token.LeftParen || prev is Token.Function)) {
+            tokens[i] = Token.UnaryMinus
+        }
+    }
 }
 
 fun moveCursor(state: CalcState, delta: Int): CalcState {
