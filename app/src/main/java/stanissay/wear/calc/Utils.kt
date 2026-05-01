@@ -79,7 +79,7 @@ object UIConstants {
     const val PREFS_NAME = "calc_prefs"
     const val KEY_STATE = "saved_state"
     const val KEY_TIMESTAMP = "saved_timestamp"
-    val BUTTON_SIZE = 24.dp
+    val BUTTON_SIZE = 32.dp
     val DISPLAY_HEIGHT = 48.dp
     val DISPLAY_WIDTH = 64.dp
     val AMBIENT_SIZE = 128.dp
