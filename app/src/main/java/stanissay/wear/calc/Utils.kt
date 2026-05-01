@@ -21,7 +21,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -42,7 +43,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.Colors
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Shapes
@@ -75,7 +79,7 @@ object UIConstants {
     const val PREFS_NAME = "calc_prefs"
     const val KEY_STATE = "saved_state"
     const val KEY_TIMESTAMP = "saved_timestamp"
-    val BUTTON_SIZE = 32.dp
+    val BUTTON_SIZE = 24.dp
     val DISPLAY_HEIGHT = 48.dp
     val DISPLAY_WIDTH = 64.dp
     val AMBIENT_SIZE = 128.dp
