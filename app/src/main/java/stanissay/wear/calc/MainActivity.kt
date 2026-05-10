@@ -298,7 +298,9 @@ fun AmbientDisplay(displayResult: String) {
         Box(
             modifier = Modifier.size(AMBIENT_SIZE),
             contentAlignment = Alignment.Center
-        ) { MainText(text = displayResult, maxLines = Int.MAX_VALUE) }
+        ) { 
+            MainText(text = displayResult, maxLines = Int.MAX_VALUE) 
+        }
     }
 }
 
