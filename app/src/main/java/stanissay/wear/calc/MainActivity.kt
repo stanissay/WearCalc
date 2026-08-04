@@ -94,6 +94,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        restoreState()
+    }
+
     override fun onResume() {
         super.onResume()
         restoreState()
