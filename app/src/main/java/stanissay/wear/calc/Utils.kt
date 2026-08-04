@@ -53,10 +53,10 @@ import androidx.wear.compose.material.Shapes
 import androidx.wear.compose.material.Typography
 import kotlinx.serialization.Serializable
 import stanissay.wear.calc.Colors.FirstAccent
-import stanissay.wear.calc.Colors.GrayColor
+import stanissay.wear.calc.Colors.Gray
 import stanissay.wear.calc.Colors.SecondAccent
-import stanissay.wear.calc.Colors.SecondBackground
-import stanissay.wear.calc.Colors.WhiteColor
+import stanissay.wear.calc.Colors.Background
+import stanissay.wear.calc.Colors.White
 import stanissay.wear.calc.Symbols.COS
 import stanissay.wear.calc.Symbols.DELETE
 import stanissay.wear.calc.Symbols.DIV
@@ -98,11 +98,11 @@ object UIConstants {
 }
 
 object Colors {
-    val SecondBackground = Color(0xFF000000)
+    val Background = Color(0xFF000000)
     val FirstAccent = Color(0xFF81C784)
     val SecondAccent = Color(0xFFFF8A65)
-    val WhiteColor = Color(0xFFCECECE)
-    val GrayColor = Color(0xFF616161)
+    val White = Color(0xFFCECECE)
+    val Gray = Color(0xFF616161)
 }
 
 object Symbols {
@@ -134,9 +134,9 @@ val TypographyStyle = Typography(
 val ColorStyle = Colors(
     primary = FirstAccent,
     secondary = SecondAccent,
-    background = SecondBackground,
-    surface = GrayColor,
-    onBackground = WhiteColor,
+    background = Background,
+    surface = Gray,
+    onBackground = White,
 )
 
 val ShapesStyle = Shapes(

@@ -11,7 +11,7 @@ plugins {
 android {
     namespace = "stanissay.wear.calc"
     compileSdk {
-        version = release(36)
+        version = release(37)
     }
 
     defaultConfig {
@@ -19,7 +19,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = 1
-        versionName = "1.2.3"
+        versionName = "1.2.4"
     }
 
     buildTypes {
@@ -41,12 +41,15 @@ android {
 
 dependencies {
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
-    implementation(platform("androidx.compose:compose-bom:2026.06.00"))
-    implementation("androidx.compose.ui:ui:1.12.0-beta01")
+    implementation(platform("androidx.compose:compose-bom:2026.06.01"))
+    implementation("androidx.compose.ui:ui:1.11.4")
+    implementation("androidx.compose.ui:ui:1.12.0-rc01")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.wear.compose:compose-material:1.7.0-alpha04")
-    implementation("androidx.wear.compose:compose-foundation:1.7.0-alpha04")
+    implementation("androidx.wear.compose:compose-material:1.7.0-alpha07")
+    implementation("androidx.wear.compose:compose-foundation:1.7.0-alpha07")
+    implementation("androidx.wear.compose:compose-material:1.6.2")
+    implementation("androidx.wear.compose:compose-foundation:1.6.2")
     implementation("androidx.wear:wear-tooling-preview:1.0.0")
     implementation("androidx.wear.watchface:watchface:1.3.0-alpha07")
     implementation("androidx.wear.watchface:watchface-complications-data-source:1.3.0")
@@ -55,8 +58,8 @@ dependencies {
     implementation("androidx.wear.watchface:watchface-complications-rendering:1.3.0-alpha07")
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.core:core-splashscreen:1.2.0")
-    implementation("androidx.compose.runtime:runtime:1.12.0-beta01")
+    implementation("androidx.compose.runtime:runtime:1.11.4")
     implementation("androidx.wear:wear:1.4.0")
-    implementation("androidx.compose.material3:material3:1.5.0-alpha22")
+    implementation("androidx.compose.material3:material3:1.4.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 }
