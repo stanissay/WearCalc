@@ -114,6 +114,11 @@ class MainActivity : ComponentActivity() {
         saveState()
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if(hasFocus) restoreState()
+    }
+
     private fun saveState() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val json = Json.encodeToString(state)
@@ -131,15 +136,10 @@ class MainActivity : ComponentActivity() {
         if (SystemClock.elapsedRealtime() - lastTime < RESTORE_TIMEOUT) {
             val json = prefs.getString(KEY_STATE, null)
             if (json != null) {
-                state = try {
-                    Json.decodeFromString<CalcState>(json)
-                } catch (_: Exception) {
-                    CalcState()
-                }
+                state = try { Json.decodeFromString<CalcState>(json)
+                } catch (_: Exception) { CalcState() }
             }
-        } else {
-            state = CalcState()
-        }
+        } else state = CalcState()
     }
 }
 
