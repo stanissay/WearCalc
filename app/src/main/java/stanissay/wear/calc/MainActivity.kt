@@ -22,6 +22,8 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -77,6 +79,15 @@ import kotlin.math.*
 
 class MainActivity : ComponentActivity() {
     private var state by mutableStateOf(CalcState())
+    private val handler = Handler(Looper.getMainLooper())
+    private val resetRunnable = Runnable {
+        state = CalcState()
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit {
+                remove(KEY_STATE)
+                remove(KEY_TIMESTAMP)
+            }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -116,7 +127,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if(hasFocus) restoreState()
+        if (hasFocus) {
+            handler.removeCallbacks(resetRunnable)
+            restoreState()
+        } else {
+            saveState()
+            handler.removeCallbacks(resetRunnable)
+            handler.postDelayed(resetRunnable, RESTORE_TIMEOUT.toLong())
+        }
     }
 
     private fun saveState() {
@@ -132,8 +150,9 @@ class MainActivity : ComponentActivity() {
     private fun restoreState() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val lastTime = prefs.getLong(KEY_TIMESTAMP, 0L)
+        val now = SystemClock.elapsedRealtime()
 
-        if (SystemClock.elapsedRealtime() - lastTime < RESTORE_TIMEOUT) {
+        if (lastTime in 1..now && now - lastTime < RESTORE_TIMEOUT) {
             val json = prefs.getString(KEY_STATE, null)
             if (json != null) {
                 state = try { Json.decodeFromString<CalcState>(json)
