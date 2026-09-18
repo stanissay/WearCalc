@@ -15,19 +15,6 @@
 
 package stanissay.wear.calc
 
-import stanissay.wear.calc.Symbols.COS
-import stanissay.wear.calc.Symbols.DIV
-import stanissay.wear.calc.Symbols.HUN
-import stanissay.wear.calc.Symbols.INF
-import stanissay.wear.calc.Symbols.MINUS
-import stanissay.wear.calc.Symbols.MULTI
-import stanissay.wear.calc.Symbols.PER
-import stanissay.wear.calc.Symbols.PLUS
-import stanissay.wear.calc.Symbols.POW
-import stanissay.wear.calc.Symbols.SIN
-import stanissay.wear.calc.Symbols.SQRT
-import stanissay.wear.calc.Symbols.TAN
-import stanissay.wear.calc.Symbols.U_MINUS
 import java.math.BigDecimal
 import java.math.RoundingMode
 import kotlin.math.pow
@@ -42,7 +29,7 @@ fun evaluate(tokens: List<Token>): String {
         val result = evalRpn(rpn)
 
         if (result.isNaN()) return ""
-        if (result.isInfinite()) return INF
+        if (result.isInfinite()) return Symbols.INF
 
         val bd = BigDecimal(result.toString())
             .setScale(10, RoundingMode.HALF_UP)
@@ -83,9 +70,9 @@ private fun isReady(tokens: List<Token>): Boolean {
 
 private fun precedence(token: Token): Int = when (token) {
     is Token.Operator -> when (token.symbol) {
-        POW -> 3
-        MULTI, DIV -> 2
-        PLUS, MINUS -> 1
+        Symbols.POW -> 3
+        Symbols.MULTI, Symbols.DIV -> 2
+        Symbols.PLUS, Symbols.MINUS -> 1
         else -> 0
     }
     is Token.Function -> 10
@@ -139,14 +126,14 @@ private fun toRpn(tokens: List<Token>): List<String> {
                 val lastOp = ops.lastOrNull()
                 output.add(b)
 
-                if (lastOp is Token.Operator && (lastOp.symbol == PLUS || lastOp.symbol == MINUS)) {
-                    output.add(PER)
-                    output.add(MULTI)
-                    output.add(HUN)
-                    output.add(DIV)
+                if (lastOp is Token.Operator && (lastOp.symbol == Symbols.PLUS || lastOp.symbol == Symbols.MINUS)) {
+                    output.add(Symbols.PER)
+                    output.add(Symbols.MULTI)
+                    output.add(Symbols.HUN)
+                    output.add(Symbols.DIV)
                 } else {
-                    output.add(HUN)
-                    output.add(DIV)
+                    output.add(Symbols.HUN)
+                    output.add(Symbols.DIV)
                 }
             }
         }
@@ -171,63 +158,63 @@ private fun evalRpn(rpn: List<String>): Double {
         if (stack.isEmpty()) return Double.NaN
 
         when (t) {
-            U_MINUS -> {
+            Symbols.U_MINUS -> {
                 val a = stack.removeLast()
                 stack.addLast(-a)
             }
-            SQRT -> {
+            Symbols.SQRT -> {
                 val a = stack.removeLast()
                 if (a < 0) return Double.NaN
                 stack.addLast(kotlin.math.sqrt(a))
             }
-            PLUS -> {
+            Symbols.PLUS -> {
                 if (stack.size < 2) return Double.NaN
                 val b = stack.removeLast()
                 val a = stack.removeLast()
                 stack.addLast(a + b)
             }
-            MINUS -> {
+            Symbols.MINUS -> {
                 if (stack.size < 2) return Double.NaN
                 val b = stack.removeLast()
                 val a = stack.removeLast()
                 stack.addLast(a - b)
             }
-            MULTI -> {
+            Symbols.MULTI -> {
                 if (stack.size < 2) return Double.NaN
                 val b = stack.removeLast()
                 val a = stack.removeLast()
                 stack.addLast(a * b)
             }
-            DIV -> {
+            Symbols.DIV -> {
                 if (stack.size < 2) return Double.NaN
                 val b = stack.removeLast()
                 val a = stack.removeLast()
                 stack.addLast(a / b)
             }
-            POW -> {
+            Symbols.POW -> {
                 if (stack.size < 2) return Double.NaN
                 val b = stack.removeLast()
                 val a = stack.removeLast()
                 stack.addLast(a.pow(b))
             }
-            PER -> {
+            Symbols.PER -> {
                 if (stack.size < 2) return Double.NaN
                 val b = stack.removeLast()
                 val a = stack.last()
                 stack.addLast(a)
                 stack.addLast(b)
             }
-            SIN -> {
+            Symbols.SIN -> {
                 val a = stack.removeLast()
                 val radians = Math.toRadians(a)
                 stack.addLast(kotlin.math.sin(radians))
             }
-            COS -> {
+            Symbols.COS -> {
                 val a = stack.removeLast()
                 val radians = Math.toRadians(a)
                 stack.addLast(kotlin.math.cos(radians))
             }
-            TAN -> {
+            Symbols.TAN -> {
                 val a = stack.removeLast()
                 val radians = Math.toRadians(a)
                 stack.addLast(kotlin.math.tan(radians))

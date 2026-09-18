@@ -15,9 +15,6 @@
 
 package stanissay.wear.calc
 
-import stanissay.wear.calc.Symbols.DOT
-import stanissay.wear.calc.Symbols.MINUS
-
 fun reduce(state: CalcState, input: Input): CalcState {
     return when (input) {
         is Input.Digit -> inputDigit(state, input)
@@ -60,7 +57,7 @@ private fun inputOperator(state: CalcState, input: Input.Operator): CalcState {
     val (index, offset) = state.cursor
     val symbol = input.symbol
 
-    if (symbol == MINUS) {
+    if (symbol == Symbols.MINUS) {
         val prevToken = tokens.getOrNull(index - 1)
         val nextToken = tokens.getOrNull(index)
 
@@ -73,7 +70,7 @@ private fun inputOperator(state: CalcState, input: Input.Operator): CalcState {
     val canInsert = canInsertOperator(tokens, index, offset)
     val prevToken = tokens.getOrNull(index - 1)
     val canBeUnary = isAtStartOfExpression || (canInsert && !isInsideNumber) || prevToken is Token.Operator || prevToken is Token.Function || prevToken is Token.LeftParen
-    val isUnaryMinus = (symbol == MINUS) && canBeUnary && offset == 0
+    val isUnaryMinus = (symbol == Symbols.MINUS) && canBeUnary && offset == 0
     if (!isUnaryMinus && !canInsert) return state
     val tokenToInsert = if (isUnaryMinus) Token.UnaryMinus else Token.Operator(symbol)
     val numberInfo = findNumberToken(tokens, index)
@@ -153,16 +150,16 @@ private fun inputDot(state: CalcState): CalcState {
 
     if (numberInfo != null) {
         val (numIndex, numToken) = numberInfo
-        if (numToken.value.contains(DOT)) return state
+        if (numToken.value.contains(Symbols.DOT)) return state
         val currentOffset = if (numIndex == index) offset else numToken.value.length
-        val newValue = numToken.value.substring(0, currentOffset) + DOT + numToken.value.substring(currentOffset)
+        val newValue = numToken.value.substring(0, currentOffset) + Symbols.DOT + numToken.value.substring(currentOffset)
         tokens[numIndex] = numToken.copy(value = newValue)
         normalizeTokens(tokens)
 
         return state.copy(tokens = tokens, cursor = Cursor(numIndex, currentOffset + 1))
     }
 
-    tokens.add(index, Token.Number("0$DOT"))
+    tokens.add(index, Token.Number("0${Symbols.DOT}"))
     normalizeTokens(tokens)
 
     return state.copy(tokens = tokens, cursor = Cursor(index + 1, 2))
@@ -371,7 +368,7 @@ private fun canInsertRightParen(tokens: List<Token>, index: Int, offset: Int): B
 }
 
 private fun normalizeTokens(tokens: MutableList<Token>) {
-    if (tokens.isNotEmpty() && tokens[0] is Token.Operator && (tokens[0] as Token.Operator).symbol == MINUS) {
+    if (tokens.isNotEmpty() && tokens[0] is Token.Operator && (tokens[0] as Token.Operator).symbol == Symbols.MINUS) {
         tokens[0] = Token.UnaryMinus
     }
 
@@ -380,8 +377,8 @@ private fun normalizeTokens(tokens: MutableList<Token>) {
         val current = tokens[i]
 
         if (current is Token.UnaryMinus && (prev is Token.Number || prev is Token.RightParen)) {
-            tokens[i] = Token.Operator(MINUS)
-        } else if (current is Token.Operator && current.symbol == MINUS && (prev is Token.Operator || prev is Token.LeftParen || prev is Token.Function)) {
+            tokens[i] = Token.Operator(Symbols.MINUS)
+        } else if (current is Token.Operator && current.symbol == Symbols.MINUS && (prev is Token.Operator || prev is Token.LeftParen || prev is Token.Function)) {
             tokens[i] = Token.UnaryMinus
         }
     }

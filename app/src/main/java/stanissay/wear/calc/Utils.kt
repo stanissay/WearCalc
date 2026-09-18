@@ -52,57 +52,40 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Shapes
 import androidx.wear.compose.material.Typography
 import kotlinx.serialization.Serializable
-import stanissay.wear.calc.Colors.FirstAccent
-import stanissay.wear.calc.Colors.Gray
-import stanissay.wear.calc.Colors.SecondAccent
-import stanissay.wear.calc.Colors.Background
-import stanissay.wear.calc.Colors.White
-import stanissay.wear.calc.Symbols.COS
-import stanissay.wear.calc.Symbols.DELETE
-import stanissay.wear.calc.Symbols.DIV
-import stanissay.wear.calc.Symbols.DOT
-import stanissay.wear.calc.Symbols.EXT
-import stanissay.wear.calc.Symbols.L_PAREN
-import stanissay.wear.calc.Symbols.MINUS
-import stanissay.wear.calc.Symbols.MULTI
-import stanissay.wear.calc.Symbols.PER
-import stanissay.wear.calc.Symbols.PLUS
-import stanissay.wear.calc.Symbols.POW
-import stanissay.wear.calc.Symbols.RES
-import stanissay.wear.calc.Symbols.R_PAREN
-import stanissay.wear.calc.Symbols.SIN
-import stanissay.wear.calc.Symbols.SQRT
-import stanissay.wear.calc.Symbols.TAN
-import stanissay.wear.calc.Symbols.U_MINUS
 
-object UIConstants {
+object Constants {
     const val PREFS_NAME = "calc_prefs"
     const val KEY_STATE = "saved_state"
     const val KEY_TIMESTAMP = "saved_timestamp"
+    const val RESTORE_TIMEOUT = 5 * 60 * 1000   // 5 minutes
+
     val BUTTON_SIZE = 32.dp
+
     val DISPLAY_HEIGHT = 48.dp
     val DISPLAY_WIDTH = 64.dp
     val AMBIENT_SIZE = 128.dp
+
     val CURSOR_PADDING = 4.dp
-    val CURSOR_WIDTH = 1.dp
-    const val ROTATION_THRESHOLD = 30f
+    val THICKNESS = 1.dp
+
     const val NUMB_RATIO = 0.350f
     const val MATH_RATIO = 0.225f
+    const val SWIPE_RATIO = 0.4f
+    const val ROTATION_THRESHOLD = 30f
     const val ACCELERATION_THRESHOLD = 12f
     const val ACCELERATION_DELAY = 1000
-    const val SWIPE_RATIO = 0.4f
-    const val RESTORE_TIMEOUT = 5 * 60 * 1000   // 5 minutes
+
     const val SCREEN_ANIMATION_DURATION = 300
     const val PAD_ANIMATION_DURATION = 500
     const val TEXT_ANIMATION_DURATION = 200
 }
 
-object Colors {
-    val Background = Color(0xFF000000)
-    val FirstAccent = Color(0xFF81C784)
-    val SecondAccent = Color(0xFFFF8A65)
-    val White = Color(0xFFCECECE)
-    val Gray = Color(0xFF616161)
+object MainColors {
+    val BACKGROUND = Color(0xFF000000)
+    val FIRST_ACCENT = Color(0xFF81C784)
+    val SECOND_ACCENT = Color(0xFFFF8A65)
+    val WHITE = Color(0xFFCECECE)
+    val GRAY = Color(0xFF616161)
 }
 
 object Symbols {
@@ -132,11 +115,11 @@ val TypographyStyle = Typography(
 )
 
 val ColorStyle = Colors(
-    primary = FirstAccent,
-    secondary = SecondAccent,
-    background = Background,
-    surface = Gray,
-    onBackground = White,
+    primary = MainColors.FIRST_ACCENT,
+    secondary = MainColors.SECOND_ACCENT,
+    background = MainColors.BACKGROUND,
+    surface = MainColors.GRAY,
+    onBackground = MainColors.WHITE,
 )
 
 val ShapesStyle = Shapes(
@@ -205,22 +188,22 @@ val NumberItems: List<Input> = listOf(
 )
 val BaseMathItems: List<Input> = listOf(
     Input.Result,
-    Input.Operator(PLUS),
-    Input.Operator(MINUS),
-    Input.Operator(MULTI),
-    Input.Operator(DIV),
+    Input.Operator(Symbols.PLUS),
+    Input.Operator(Symbols.MINUS),
+    Input.Operator(Symbols.MULTI),
+    Input.Operator(Symbols.DIV),
     Input.LeftParen,
     Input.RightParen,
     Input.Extended
 )
 val ExtendedMathItems: List<Input> = listOf(
     Input.Result,
-    Input.Operator(POW),
-    Input.Function(SQRT),
+    Input.Operator(Symbols.POW),
+    Input.Function(Symbols.SQRT),
     Input.Percent,
-    Input.Function(SIN),
-    Input.Function(COS),
-    Input.Function(TAN),
+    Input.Function(Symbols.SIN),
+    Input.Function(Symbols.COS),
+    Input.Function(Symbols.TAN),
     Input.Extended
 )
 
@@ -228,10 +211,10 @@ fun Token.toSymbol(): String = when(this) {
     is Token.Number -> value
     is Token.Operator -> symbol
     is Token.Function -> name
-    is Token.UnaryMinus -> U_MINUS
-    is Token.LeftParen -> L_PAREN
-    is Token.RightParen -> R_PAREN
-    is Token.Percent -> PER
+    is Token.UnaryMinus -> Symbols.U_MINUS
+    is Token.LeftParen -> Symbols.L_PAREN
+    is Token.RightParen -> Symbols.R_PAREN
+    is Token.Percent -> Symbols.PER
 }
 
 fun List<Token>.toDisplayString(): String {
@@ -240,10 +223,10 @@ fun List<Token>.toDisplayString(): String {
             is Token.Number -> token.value
             is Token.Operator -> token.symbol
             is Token.Function -> token.name
-            is Token.UnaryMinus -> MINUS
-            is Token.LeftParen -> L_PAREN
-            is Token.RightParen -> R_PAREN
-            is Token.Percent -> PER
+            is Token.UnaryMinus -> Symbols.MINUS
+            is Token.LeftParen -> Symbols.L_PAREN
+            is Token.RightParen -> Symbols.R_PAREN
+            is Token.Percent -> Symbols.PER
         }
     }
 }
@@ -252,17 +235,17 @@ fun Input.toDisplayString(): String = when (this) {
     is Input.Digit -> value
     is Input.Operator -> symbol
     is Input.Function -> name
-    is Input.Result -> RES
-    is Input.Extended -> EXT
-    is Input.Dot -> DOT
-    is Input.Delete -> DELETE
-    is Input.LeftParen -> L_PAREN
-    is Input.RightParen -> R_PAREN
-    is Input.Percent -> PER
+    is Input.Result -> Symbols.RES
+    is Input.Extended -> Symbols.EXT
+    is Input.Dot -> Symbols.DOT
+    is Input.Delete -> Symbols.DELETE
+    is Input.LeftParen -> Symbols.L_PAREN
+    is Input.RightParen -> Symbols.R_PAREN
+    is Input.Percent -> Symbols.PER
 }
 
 fun isMinus(token: Token?): Boolean {
-    return (token is Token.Operator && token.symbol == MINUS) || (token is Token.UnaryMinus)
+    return (token is Token.Operator && token.symbol == Symbols.MINUS) || (token is Token.UnaryMinus)
 }
 
 @Composable
