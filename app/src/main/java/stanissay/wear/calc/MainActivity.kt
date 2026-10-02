@@ -55,6 +55,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.wear.ambient.AmbientLifecycleObserver
 import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.TimeText
 import kotlinx.serialization.json.Json
 import kotlin.math.*
 
@@ -300,6 +301,7 @@ fun AmbientDisplay(displayResult: String) {
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background),
         contentAlignment = Alignment.Center
     ) {
+        TimeText()
         Box(
             modifier = Modifier.size(Constants.AMBIENT_SIZE),
             contentAlignment = Alignment.Center
