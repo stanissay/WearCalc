@@ -2,15 +2,15 @@
 
 ## Round Calculator for Wear OS
 
-![Logo](assets/logo.png)
+![Logo](assets/logo.jpg)
 
 A sleek, intuitive calculator designed specifically for circular Wear OS displays. Built with modern Android development practices to ensure smooth performance and battery efficiency.
 
 ## 📸 Screenshots
 
 <div align="center">
-  <img src="assets/screenshot1.jpg" width="300" alt="Main Screen">
-  <img src="assets/screenshot2.jpg" width="300" alt="Calculation View">
+  <img src="assets/screenshot1.jpg" width="438" alt="Main Screen">
+  <img src="assets/screenshot2.jpg" width="438" alt="Calculation View">
 </div>
 
 ## ✨ Features
