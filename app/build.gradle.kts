@@ -19,7 +19,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = 1
-        versionName = "1.6"
+        versionName = "1.7"
     }
 
     buildTypes {
@@ -49,11 +49,11 @@ dependencies {
 
     implementation("androidx.wear:wear:1.4.0")
 
-    implementation("androidx.wear.compose:compose-foundation:1.7.0")
+    implementation("androidx.wear.compose:compose-foundation:1.7.1")
     implementation("androidx.wear.watchface:watchface:1.3.0-alpha07")
     implementation("androidx.wear.watchface:watchface-complications-rendering:1.3.0-alpha07")
     implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.3.0")
-    implementation("androidx.wear.compose:compose-material:1.7.0")
+    implementation("androidx.wear.compose:compose-material:1.7.1")
     implementation("androidx.compose.material3:material3:1.4.0")
 
     implementation("com.google.android.gms:play-services-wearable:20.0.1")

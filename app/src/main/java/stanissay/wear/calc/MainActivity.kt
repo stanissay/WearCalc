@@ -52,6 +52,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.wear.ambient.AmbientLifecycleObserver
 import androidx.wear.compose.material.MaterialTheme
@@ -158,7 +160,7 @@ fun CalcScreen(
     val displayResult by remember(currentState.tokens) { derivedStateOf { evaluate(currentState.tokens) } }
 
     DisposableEffect(lifecycleOwner) {
-        val observer = AmbientLifecycleObserver(
+        val ambientObserver = AmbientLifecycleObserver(
             context as Activity,
             callbacks = object : AmbientLifecycleObserver.AmbientLifecycleCallback {
                 override fun onEnterAmbient(ambientDetails: AmbientLifecycleObserver.AmbientDetails) { ambientState.value = true }
@@ -166,8 +168,21 @@ fun CalcScreen(
                 override fun onUpdateAmbient() {}
             }
         )
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+
+        val lifecycleObserver = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START, Lifecycle.Event.ON_RESUME -> ambientState.value = false
+                else -> Unit
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(ambientObserver)
+        lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(ambientObserver)
+            lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+        }
     }
 
     DisposableEffect(Unit) {
