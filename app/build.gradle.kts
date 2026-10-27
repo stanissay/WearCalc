@@ -19,7 +19,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = 1
-        versionName = "1.7"
+        versionName = "1.8"
     }
 
     buildTypes {
@@ -57,6 +57,6 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.4.0")
 
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
     implementation("androidx.compose.runtime:runtime:1.12.1")
 }

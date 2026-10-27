@@ -24,7 +24,7 @@
         <service
                 android:name=".ComplicationService"
                 android:exported="true"
-                android:icon="@drawable/calculator_vector"
+                android:icon="@drawable/ic_launcher"
                 android:label="@string/app_name"
                 android:permission="com.google.android.wearable.permission.BIND_COMPLICATION_PROVIDER">
             <intent-filter>
