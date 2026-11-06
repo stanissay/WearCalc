@@ -107,6 +107,7 @@ object Symbols {
     const val COS = "cos"
     const val TAN = "tan"
     const val INF = "∞"
+    const val NULL = "0"
     const val HUN = "100"
 }
 
@@ -246,6 +247,25 @@ fun Input.toDisplayString(): String = when (this) {
 
 fun isMinus(token: Token?): Boolean {
     return (token is Token.Operator && token.symbol == Symbols.MINUS) || (token is Token.UnaryMinus)
+}
+
+fun MutableList<Token>.splitNumberAt(numIndex: Int, offset: Int, middle: Token): Int {
+    val number = this[numIndex] as Token.Number
+    val left = number.value.substring(0, offset)
+    val right = number.value.substring(offset)
+    removeAt(numIndex)
+    var i = numIndex
+    if (left.isNotEmpty()) add(i++, Token.Number(left))
+    add(i++, middle)
+    val afterMiddle = i
+    if (right.isNotEmpty()) add(i, Token.Number(right))
+    return afterMiddle
+}
+
+fun trimLeadingZeros(value: String, cursor: Int): Pair<String, Int> {
+    var drop = 0
+    while (drop < value.length - 1 && value[drop] == '0' && value[drop + 1].isDigit()) drop++
+    return value.substring(drop) to (cursor - drop).coerceAtLeast(0)
 }
 
 @Composable

@@ -29,13 +29,13 @@ fun evaluate(tokens: List<Token>): String {
         val result = evalRpn(rpn)
 
         if (result.isNaN()) return ""
-        if (result.isInfinite()) return Symbols.INF
+        if (result.isInfinite()) return if (result < 0) "${Symbols.MINUS}${Symbols.INF}" else Symbols.INF
 
         val bd = BigDecimal(result.toString())
             .setScale(10, RoundingMode.HALF_UP)
             .stripTrailingZeros()
 
-        if (bd.scale() <= 0) bd.toPlainString() else bd.toPlainString()
+        bd.toPlainString()
     } catch (_: Exception) { "" }
 }
 
@@ -51,9 +51,14 @@ private fun isValid(tokens: List<Token>): Boolean {
 
         if (current is Token.LeftParen && next is Token.RightParen) return false
         if (current is Token.Operator && next is Token.Operator) return false
+        if (current is Token.Operator && next is Token.RightParen) return false
+        if (current is Token.UnaryMinus && next is Token.Operator) return false
+        if (current is Token.UnaryMinus && next is Token.RightParen) return false
         if (current is Token.Function && next is Token.Operator) return false
         if (i == 0 && (current is Token.Operator || current is Token.RightParen)) return false
         if (i == tokens.lastIndex && (current is Token.Operator || current is Token.Function || current is Token.LeftParen)) return false
+        if ((current is Token.Number || current is Token.RightParen || current is Token.Percent) &&
+            (next is Token.Number || next is Token.LeftParen || next is Token.Function)) return false
     }
     return balance == 0
 }
@@ -70,13 +75,13 @@ private fun isReady(tokens: List<Token>): Boolean {
 
 private fun precedence(token: Token): Int = when (token) {
     is Token.Operator -> when (token.symbol) {
-        Symbols.POW -> 3
+        Symbols.POW -> 4
         Symbols.MULTI, Symbols.DIV -> 2
         Symbols.PLUS, Symbols.MINUS -> 1
         else -> 0
     }
     is Token.Function -> 10
-    is Token.UnaryMinus -> 9
+    is Token.UnaryMinus -> 3
     is Token.RightParen -> 0
     is Token.Percent -> 8
     else -> 0
@@ -112,19 +117,19 @@ private fun toRpn(tokens: List<Token>): List<String> {
             }
 
             is Token.Operator -> {
-                while (ops.isNotEmpty() &&
-                    ops.last() !is Token.LeftParen &&
-                    ops.last() !is Token.Function &&
-                    precedence(ops.last()) >= precedence(t)) {
-                    output.add(ops.removeLast().toSymbol())
+                val rightAssoc = t.symbol == Symbols.POW
+                while (ops.isNotEmpty() && ops.last() !is Token.LeftParen) {
+                    val top = precedence(ops.last())
+                    val cur = precedence(t)
+                    if (top > cur || (top == cur && !rightAssoc)) {
+                        output.add(ops.removeLast().toSymbol())
+                    } else break
                 }
                 ops.addLast(t)
             }
 
             is Token.Percent -> {
-                val b = output.removeAt(output.lastIndex)
                 val lastOp = ops.lastOrNull()
-                output.add(b)
 
                 if (lastOp is Token.Operator && (lastOp.symbol == Symbols.PLUS || lastOp.symbol == Symbols.MINUS)) {
                     output.add(Symbols.PER)

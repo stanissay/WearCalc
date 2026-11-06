@@ -30,83 +30,48 @@ fun reduce(state: CalcState, input: Input): CalcState {
     }
 }
 
-private fun inputDigit(state: CalcState, input: Input.Digit): CalcState {
-    val tokens = state.tokens.toMutableList()
-    val (index, offset) = state.cursor
-    val numberInfo = findNumberToken(tokens, index)
-
-    if (numberInfo != null) {
-        val (numIndex, numToken) = numberInfo
-        val currentOffset = if (numIndex == index) offset else numToken.value.length
-        val newValue = numToken.value.substring(0, currentOffset) + input.value + numToken.value.substring(currentOffset)
-
-        tokens[numIndex] = numToken.copy(value = newValue)
-        normalizeTokens(tokens)
-
-        return state.copy(tokens = tokens, cursor = Cursor(numIndex, currentOffset + 1))
-    }
-
-    tokens.add(index, Token.Number(input.value))
-    normalizeTokens(tokens)
-
-    return state.copy(tokens = tokens, cursor = Cursor(index + 1, input.value.length))
-}
+private fun inputDigit(state: CalcState, input: Input.Digit): CalcState =
+    insertIntoNumber(state, input.value) ?: state
 
 private fun inputOperator(state: CalcState, input: Input.Operator): CalcState {
     val tokens = state.tokens.toMutableList()
     val (index, offset) = state.cursor
     val symbol = input.symbol
+    val prevToken = tokens.getOrNull(index - 1)
 
     if (symbol == Symbols.MINUS) {
-        val prevToken = tokens.getOrNull(index - 1)
         val nextToken = tokens.getOrNull(index)
-
         if (isMinus(prevToken) || isMinus(nextToken)) return state
     }
 
     val tokenUnderCursor = tokens.getOrNull(index)
-    val isInsideNumber = (tokenUnderCursor is Token.Number && offset > 0)
-    val isAtStartOfExpression = (index == 0 && offset == 0)
+    val isInsideNumber = tokenUnderCursor is Token.Number && offset > 0
+    val isAtStartOfExpression = index == 0 && offset == 0
     val canInsert = canInsertOperator(tokens, index, offset)
-    val prevToken = tokens.getOrNull(index - 1)
-    val canBeUnary = isAtStartOfExpression || (canInsert && !isInsideNumber) || prevToken is Token.Operator || prevToken is Token.Function || prevToken is Token.LeftParen
-    val isUnaryMinus = (symbol == Symbols.MINUS) && canBeUnary && offset == 0
+    val canBeUnary = isAtStartOfExpression || (canInsert && !isInsideNumber) ||
+            prevToken is Token.Operator || prevToken is Token.Function || prevToken is Token.LeftParen
+    val isUnaryMinus = symbol == Symbols.MINUS && canBeUnary && offset == 0
     if (!isUnaryMinus && !canInsert) return state
-    val tokenToInsert = if (isUnaryMinus) Token.UnaryMinus else Token.Operator(symbol)
-    val numberInfo = findNumberToken(tokens, index)
 
+    val tokenToInsert = if (isUnaryMinus) Token.UnaryMinus else Token.Operator(symbol)
+
+    if (!isUnaryMinus && offset == 0 && prevToken is Token.Operator) {
+        tokens[index - 1] = tokenToInsert
+        normalizeTokens(tokens)
+        return state.copy(tokens = tokens, isExtended = false)
+    }
+
+    val numberInfo = findNumberToken(tokens, index)
     if (numberInfo != null) {
         val (numIndex, numToken) = numberInfo
         val realOffset = if (numIndex == index - 1) numToken.value.length else offset
-        val left = numToken.value.substring(0, realOffset)
-        val right = numToken.value.substring(realOffset)
-        val tokenToInsert = if (isUnaryMinus) Token.UnaryMinus else Token.Operator(symbol)
-        val newParts = mutableListOf<Token>()
-        if (left.isNotEmpty()) newParts.add(Token.Number(left))
-        newParts.add(tokenToInsert)
-        if (right.isNotEmpty()) newParts.add(Token.Number(right))
-
-        tokens.removeAt(numIndex)
-        tokens.addAll(numIndex, newParts)
+        val next = tokens.splitNumberAt(numIndex, realOffset, tokenToInsert)
         normalizeTokens(tokens)
-
-        return state.copy(
-            tokens = tokens,
-            cursor = Cursor(numIndex + newParts.indexOf(tokenToInsert) + 1, 0),
-            isExtended = false
-        )
-    }
-
-    if (prevToken is Token.Operator && tokenToInsert !is Token.UnaryMinus) {
-        tokens[index - 1] = tokenToInsert
-        normalizeTokens(tokens)
-
-        return state.copy(tokens = tokens, isExtended = false)
+        return state.copy(tokens = tokens, cursor = Cursor(next, 0), isExtended = false)
     }
 
     tokens.add(index, tokenToInsert)
     normalizeTokens(tokens)
-
     return state.copy(tokens = tokens, cursor = Cursor(index + 1, 0), isExtended = false)
 }
 
@@ -129,14 +94,12 @@ private fun inputFunction(state: CalcState, input: Input.Function): CalcState {
 
 private fun finalizeCalculation(state: CalcState): CalcState {
     val result = evaluate(state.tokens)
-    if (result.isEmpty()) return state
-    val newToken = Token.Number(result)
-
-    return CalcState(
-        tokens = listOf(newToken),
-        cursor = Cursor(0, result.length),
-        isExtended = false
-    )
+    if (result.isEmpty() || result.endsWith(Symbols.INF)) return state
+    val negative = result.startsWith(Symbols.MINUS)
+    val digits = result.removePrefix(Symbols.MINUS)
+    val tokens = if (negative) listOf(Token.UnaryMinus, Token.Number(digits))
+    else listOf(Token.Number(digits))
+    return CalcState(tokens, Cursor(tokens.lastIndex, digits.length))
 }
 
 private fun extendItems(state: CalcState): CalcState {
@@ -144,25 +107,35 @@ private fun extendItems(state: CalcState): CalcState {
 }
 
 private fun inputDot(state: CalcState): CalcState {
+    val number = findNumberToken(state.tokens, state.cursor.tokenIndex)?.second
+    if (number != null && number.value.contains(Symbols.DOT)) return state
+    return insertIntoNumber(state, Symbols.DOT, newNumberText = "${Symbols.NULL}${Symbols.DOT}") ?: state
+}
+
+private fun insertIntoNumber(state: CalcState, text: String, newNumberText: String = text): CalcState? {
     val tokens = state.tokens.toMutableList()
     val (index, offset) = state.cursor
     val numberInfo = findNumberToken(tokens, index)
 
-    if (numberInfo != null) {
-        val (numIndex, numToken) = numberInfo
-        if (numToken.value.contains(Symbols.DOT)) return state
-        val currentOffset = if (numIndex == index) offset else numToken.value.length
-        val newValue = numToken.value.substring(0, currentOffset) + Symbols.DOT + numToken.value.substring(currentOffset)
-        tokens[numIndex] = numToken.copy(value = newValue)
+    if (numberInfo == null) {
+        if (!canInsertDigit(tokens, index)) return null
+        tokens.add(index, Token.Number(newNumberText))
         normalizeTokens(tokens)
-
-        return state.copy(tokens = tokens, cursor = Cursor(numIndex, currentOffset + 1))
+        return state.copy(tokens = tokens, cursor = Cursor(index + 1, newNumberText.length))
     }
 
-    tokens.add(index, Token.Number("0${Symbols.DOT}"))
-    normalizeTokens(tokens)
+    val (numIndex, numToken) = numberInfo
+    val len = numToken.value.length
+    val at = (if (numIndex == index) offset else len).coerceIn(0, len)
 
-    return state.copy(tokens = tokens, cursor = Cursor(index + 1, 2))
+    val (value, newOffset) = trimLeadingZeros(
+        numToken.value.substring(0, at) + text + numToken.value.substring(at),
+        at + text.length
+    )
+
+    tokens[numIndex] = numToken.copy(value = value)
+    normalizeTokens(tokens)
+    return state.copy(tokens = tokens, cursor = Cursor(numIndex, newOffset))
 }
 
 private fun handleDelete(state: CalcState): CalcState {
@@ -270,21 +243,9 @@ private fun inputRightParen(state: CalcState): CalcState {
     if (numberInfo != null) {
         val (numIndex, numToken) = numberInfo
         val realOffset = if (numIndex == index - 1) numToken.value.length else offset
-        val leftPart = numToken.value.substring(0, realOffset)
-        val rightPart = numToken.value.substring(realOffset)
-        val newParts = mutableListOf<Token>()
-        if (leftPart.isNotEmpty()) newParts.add(Token.Number(leftPart))
-        newParts.add(Token.RightParen)
-        if (rightPart.isNotEmpty()) newParts.add(Token.Number(rightPart))
-
-        tokens.removeAt(numIndex)
-        tokens.addAll(numIndex, newParts)
+        val next = tokens.splitNumberAt(numIndex, realOffset, Token.RightParen)
         normalizeTokens(tokens)
-
-        return state.copy(
-            tokens = tokens,
-            cursor = Cursor(numIndex + newParts.indexOf(Token.RightParen) + 1, 0)
-        )
+        return state.copy(tokens = tokens, cursor = Cursor(next, 0))
     }
 
     tokens.add(index, Token.RightParen)
@@ -301,6 +262,7 @@ private fun inputPercent(state: CalcState): CalcState {
     val index = state.cursor.tokenIndex
     val numberInfo = findNumberToken(tokens, index) ?: return state
     val (numIndex, _) = numberInfo
+    if (tokens.getOrNull(numIndex + 1) is Token.Percent) return state
     val insertIndex = numIndex + 1
 
     tokens.add(insertIndex, Token.Percent)
@@ -319,6 +281,14 @@ private fun findNumberToken(tokens: List<Token>, index: Int): Pair<Int, Token.Nu
         tokens.getOrNull(index - 1) is Token.Number -> (index - 1) to tokens[index - 1] as Token.Number
         else -> null
     }
+}
+
+private fun canInsertDigit(tokens: List<Token>, index: Int): Boolean {
+    val prev = tokens.getOrNull(index - 1)
+    val next = tokens.getOrNull(index)
+    if (prev is Token.RightParen || prev is Token.Percent) return false
+    if (next is Token.LeftParen || next is Token.Function) return false
+    return true
 }
 
 private fun canInsertOperator(tokens: List<Token>, index: Int, offset: Int): Boolean {
