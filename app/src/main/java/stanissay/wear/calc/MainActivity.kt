@@ -22,6 +22,8 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -50,33 +52,26 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.wear.ambient.AmbientLifecycleObserver
 import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.TimeText
 import kotlinx.serialization.json.Json
-import stanissay.wear.calc.UIConstants.ACCELERATION_DELAY
-import stanissay.wear.calc.UIConstants.ACCELERATION_THRESHOLD
-import stanissay.wear.calc.UIConstants.AMBIENT_SIZE
-import stanissay.wear.calc.UIConstants.BUTTON_SIZE
-import stanissay.wear.calc.UIConstants.CURSOR_PADDING
-import stanissay.wear.calc.UIConstants.CURSOR_WIDTH
-import stanissay.wear.calc.UIConstants.DISPLAY_HEIGHT
-import stanissay.wear.calc.UIConstants.DISPLAY_WIDTH
-import stanissay.wear.calc.UIConstants.KEY_STATE
-import stanissay.wear.calc.UIConstants.KEY_TIMESTAMP
-import stanissay.wear.calc.UIConstants.MATH_RATIO
-import stanissay.wear.calc.UIConstants.NUMB_RATIO
-import stanissay.wear.calc.UIConstants.PAD_ANIMATION_DURATION
-import stanissay.wear.calc.UIConstants.PREFS_NAME
-import stanissay.wear.calc.UIConstants.RESTORE_TIMEOUT
-import stanissay.wear.calc.UIConstants.ROTATION_THRESHOLD
-import stanissay.wear.calc.UIConstants.SCREEN_ANIMATION_DURATION
-import stanissay.wear.calc.UIConstants.SWIPE_RATIO
-import stanissay.wear.calc.UIConstants.TEXT_ANIMATION_DURATION
 import kotlin.math.*
 
 class MainActivity : ComponentActivity() {
     private var state by mutableStateOf(CalcState())
+    private val handler = Handler(Looper.getMainLooper())
+    private val resetRunnable = Runnable {
+        state = CalcState()
+        getSharedPreferences(Constants.PREFS_NAME, MODE_PRIVATE)
+            .edit {
+                remove(Constants.KEY_STATE)
+                remove(Constants.KEY_TIMESTAMP)
+            }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -94,6 +89,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        restoreState()
+    }
+
     override fun onResume() {
         super.onResume()
         restoreState()
@@ -109,32 +109,40 @@ class MainActivity : ComponentActivity() {
         saveState()
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            handler.removeCallbacks(resetRunnable)
+            restoreState()
+        } else {
+            saveState()
+            handler.removeCallbacks(resetRunnable)
+            handler.postDelayed(resetRunnable, Constants.RESTORE_TIMEOUT.toLong())
+        }
+    }
+
     private fun saveState() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val prefs = getSharedPreferences(Constants.PREFS_NAME, MODE_PRIVATE)
         val json = Json.encodeToString(state)
 
         prefs.edit {
-            putString(KEY_STATE, json)
-            putLong(KEY_TIMESTAMP, SystemClock.elapsedRealtime())
+            putString(Constants.KEY_STATE, json)
+            putLong(Constants.KEY_TIMESTAMP, SystemClock.elapsedRealtime())
         }
     }
 
     private fun restoreState() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        val lastTime = prefs.getLong(KEY_TIMESTAMP, 0L)
+        val prefs = getSharedPreferences(Constants.PREFS_NAME, MODE_PRIVATE)
+        val lastTime = prefs.getLong(Constants.KEY_TIMESTAMP, 0L)
+        val now = SystemClock.elapsedRealtime()
 
-        if (SystemClock.elapsedRealtime() - lastTime < RESTORE_TIMEOUT) {
-            val json = prefs.getString(KEY_STATE, null)
+        if (lastTime in 1..now && now - lastTime < Constants.RESTORE_TIMEOUT) {
+            val json = prefs.getString(Constants.KEY_STATE, null)
             if (json != null) {
-                state = try {
-                    Json.decodeFromString<CalcState>(json)
-                } catch (_: Exception) {
-                    CalcState()
-                }
+                state = try { Json.decodeFromString<CalcState>(json)
+                } catch (_: Exception) { CalcState() }
             }
-        } else {
-            state = CalcState()
-        }
+        } else state = CalcState()
     }
 }
 
@@ -152,7 +160,7 @@ fun CalcScreen(
     val displayResult by remember(currentState.tokens) { derivedStateOf { evaluate(currentState.tokens) } }
 
     DisposableEffect(lifecycleOwner) {
-        val observer = AmbientLifecycleObserver(
+        val ambientObserver = AmbientLifecycleObserver(
             context as Activity,
             callbacks = object : AmbientLifecycleObserver.AmbientLifecycleCallback {
                 override fun onEnterAmbient(ambientDetails: AmbientLifecycleObserver.AmbientDetails) { ambientState.value = true }
@@ -160,8 +168,21 @@ fun CalcScreen(
                 override fun onUpdateAmbient() {}
             }
         )
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+
+        val lifecycleObserver = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START, Lifecycle.Event.ON_RESUME -> ambientState.value = false
+                else -> Unit
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(ambientObserver)
+        lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(ambientObserver)
+            lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+        }
     }
 
     DisposableEffect(Unit) {
@@ -173,9 +194,9 @@ fun CalcScreen(
             override fun onSensorChanged(event: SensorEvent?) {
                 if (event == null) return
                 val accel = sqrt(event.values[0].pow(2) + event.values[1].pow(2) + event.values[2].pow(2)) - SensorManager.GRAVITY_EARTH
-                if (accel > ACCELERATION_THRESHOLD && currentState.tokens.isNotEmpty()) {
+                if (accel > Constants.ACCELERATION_THRESHOLD && currentState.tokens.isNotEmpty()) {
                     val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastShakeTime > ACCELERATION_DELAY) {
+                    if (currentTime - lastShakeTime > Constants.ACCELERATION_DELAY) {
                         haptic.performHapticFeedback(HapticFeedbackType.Confirm)
                         onStateChange(CalcState())
                         lastShakeTime = currentTime
@@ -190,7 +211,7 @@ fun CalcScreen(
 
     Crossfade(
         targetState = ambientState.value,
-        animationSpec = tween(durationMillis = SCREEN_ANIMATION_DURATION, easing = LinearOutSlowInEasing),
+        animationSpec = tween(durationMillis = Constants.SCREEN_ANIMATION_DURATION, easing = LinearOutSlowInEasing),
         label = "ambientTransition"
     ) { isAmbient ->
         if (isAmbient) {
@@ -220,7 +241,7 @@ fun ActiveDisplay(
     val density = LocalDensity.current
     val currentState by rememberUpdatedState(state)
     val focusRequester = remember { FocusRequester() }
-    val thresholdPx = with(density) { (configuration.screenWidthDp * SWIPE_RATIO).dp.toPx() }
+    val thresholdPx = with(density) { (configuration.screenWidthDp * Constants.SWIPE_RATIO).dp.toPx() }
     var rotationAccumulator = 0f
     var totalDragDistanceX by remember { mutableFloatStateOf(0f) }
     var totalDragDistanceY by remember { mutableFloatStateOf(0f) }
@@ -262,7 +283,7 @@ fun ActiveDisplay(
             }
             .onRotaryScrollEvent { rotaryEvent ->
                 rotationAccumulator += rotaryEvent.verticalScrollPixels
-                if (abs(rotationAccumulator) >= ROTATION_THRESHOLD) {
+                if (abs(rotationAccumulator) >= Constants.ROTATION_THRESHOLD) {
                     haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                     onStateChange(moveCursor(currentState, if (rotationAccumulator > 0) 1 else -1))
                     rotationAccumulator = 0f
@@ -295,8 +316,9 @@ fun AmbientDisplay(displayResult: String) {
         modifier = Modifier.fillMaxSize().background(MaterialTheme.colors.background),
         contentAlignment = Alignment.Center
     ) {
+        TimeText()
         Box(
-            modifier = Modifier.size(AMBIENT_SIZE),
+            modifier = Modifier.size(Constants.AMBIENT_SIZE),
             contentAlignment = Alignment.Center
         ) { 
             MainText(text = displayResult, maxLines = Int.MAX_VALUE) 
@@ -313,7 +335,7 @@ fun CircularNumberPad(
     CircularPad(
         modifier = modifier,
         items = NumberItems,
-        radiusRatio = NUMB_RATIO,
+        radiusRatio = Constants.NUMB_RATIO,
         contentColor = MaterialTheme.colors.primary,
         onClick = onClick,
         onLongClick = onLongClick
@@ -329,17 +351,17 @@ fun CircularMathPad(
     AnimatedContent(
         targetState = isExtended,
         transitionSpec = {
-            slideInVertically(animationSpec = tween(PAD_ANIMATION_DURATION, easing = FastOutSlowInEasing)) { it / 2 } +
-                    fadeIn(animationSpec = tween(PAD_ANIMATION_DURATION)) togetherWith
-                    slideOutVertically(animationSpec = tween(PAD_ANIMATION_DURATION, easing = FastOutSlowInEasing)) { -it / 2 } +
-                    fadeOut(animationSpec = tween(PAD_ANIMATION_DURATION))
+            slideInVertically(animationSpec = tween(Constants.PAD_ANIMATION_DURATION, easing = FastOutSlowInEasing)) { it / 2 } +
+                    fadeIn(animationSpec = tween(Constants.PAD_ANIMATION_DURATION)) togetherWith
+                    slideOutVertically(animationSpec = tween(Constants.PAD_ANIMATION_DURATION, easing = FastOutSlowInEasing)) { -it / 2 } +
+                    fadeOut(animationSpec = tween(Constants.PAD_ANIMATION_DURATION))
         },
         modifier = modifier,
         label = "mathPadTransition"
     ) { extended ->
         CircularPad(
             items = if (extended) ExtendedMathItems else BaseMathItems,
-            radiusRatio = MATH_RATIO,
+            radiusRatio = Constants.MATH_RATIO,
             contentColor = MaterialTheme.colors.secondary,
             onClick = onClick
         )
@@ -378,7 +400,7 @@ fun CenterDisplay(
         val rect = layout.getCursorRect(stringCursorIndex)
         val cursorX = rect.left
 
-        val target = (cursorX + with(density) { CURSOR_PADDING.toPx() }).toInt()
+        val target = (cursorX + with(density) { Constants.CURSOR_PADDING.toPx() }).toInt()
 
         if (target != inputScrollState.value) {
             inputScrollState.animateScrollTo(target)
@@ -390,7 +412,7 @@ fun CenterDisplay(
         rippleColor = Color.Transparent,
         onClick = { onClick(Input.Result) }
     ) {
-        Column(modifier = Modifier.height(DISPLAY_HEIGHT).width(DISPLAY_WIDTH)) {
+        Column(modifier = Modifier.height(Constants.DISPLAY_HEIGHT).width(Constants.DISPLAY_WIDTH)) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -401,13 +423,13 @@ fun CenterDisplay(
                 AnimatedContent(
                     targetState = text,
                     transitionSpec = {
-                        scaleIn(animationSpec = tween(TEXT_ANIMATION_DURATION), initialScale = 0.9f) + fadeIn(tween(TEXT_ANIMATION_DURATION)) togetherWith
-                                scaleOut(animationSpec = tween(TEXT_ANIMATION_DURATION), targetScale = 1f) + fadeOut(tween(TEXT_ANIMATION_DURATION))
+                        scaleIn(animationSpec = tween(Constants.TEXT_ANIMATION_DURATION), initialScale = 0.9f) + fadeIn(tween(Constants.TEXT_ANIMATION_DURATION)) togetherWith
+                                scaleOut(animationSpec = tween(Constants.TEXT_ANIMATION_DURATION), targetScale = 1f) + fadeOut(tween(Constants.TEXT_ANIMATION_DURATION))
                     },
                     label = "deleteAnimation"
                 ) { text ->
                     MainText(
-                        modifier = Modifier.padding(horizontal = CURSOR_PADDING),
+                        modifier = Modifier.padding(horizontal = Constants.CURSOR_PADDING),
                         text = text,
                         onTextLayout = { layoutResult = it }
                     )
@@ -422,9 +444,9 @@ fun CenterDisplay(
                             cursorRect?.let { rect ->
                                 Box(
                                     modifier = Modifier
-                                        .padding(horizontal = CURSOR_PADDING)
+                                        .padding(horizontal = Constants.CURSOR_PADDING)
                                         .offset { IntOffset(rect.left.toInt(), 0) }
-                                        .width(CURSOR_WIDTH)
+                                        .width(Constants.THICKNESS)
                                         .height(with(density) { rect.height.toDp() })
                                         .background(MaterialTheme.colors.surface)
                                 )
@@ -441,13 +463,13 @@ fun CenterDisplay(
                     targetState = displayResult,
                     transitionSpec = {
                         if (targetState.isBlank()) {
-                            (fadeIn(animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
-                                    scaleIn(initialScale = 1f, animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing))) togetherWith
-                                    (fadeOut(animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
-                                            scaleOut(targetScale = 0.9f, animationSpec = tween(TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)))
+                            (fadeIn(animationSpec = tween(Constants.TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
+                                    scaleIn(initialScale = 1f, animationSpec = tween(Constants.TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing))) togetherWith
+                                    (fadeOut(animationSpec = tween(Constants.TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)) +
+                                            scaleOut(targetScale = 0.9f, animationSpec = tween(Constants.TEXT_ANIMATION_DURATION, easing = FastOutSlowInEasing)))
                         } else {
-                            scaleIn(animationSpec = tween(TEXT_ANIMATION_DURATION), initialScale = 0.9f) + fadeIn(tween(TEXT_ANIMATION_DURATION)) togetherWith
-                                    scaleOut(animationSpec = tween(TEXT_ANIMATION_DURATION), targetScale = 1f) + fadeOut(tween(TEXT_ANIMATION_DURATION))
+                            scaleIn(animationSpec = tween(Constants.TEXT_ANIMATION_DURATION), initialScale = 0.9f) + fadeIn(tween(Constants.TEXT_ANIMATION_DURATION)) togetherWith
+                                    scaleOut(animationSpec = tween(Constants.TEXT_ANIMATION_DURATION), targetScale = 1f) + fadeOut(tween(Constants.TEXT_ANIMATION_DURATION))
                         }
                     },
                     label = "clearAnimation"
@@ -481,11 +503,11 @@ fun CircularPad(
                 modifier = Modifier
                     .offset {
                         IntOffset(
-                            (x - (BUTTON_SIZE / 2).toPx()).toInt(),
-                            (y - (BUTTON_SIZE / 2).toPx()).toInt()
+                            (x - (Constants.BUTTON_SIZE / 2).toPx()).toInt(),
+                            (y - (Constants.BUTTON_SIZE / 2).toPx()).toInt()
                         )
                     }
-                    .size(BUTTON_SIZE),
+                    .size(Constants.BUTTON_SIZE),
                 onClick = { onClick(input) },
                 onLongClick = if (input == Input.Delete) { { onLongClick?.invoke(input) } } else null
             ) { MainText(text = input.toDisplayString(), color = contentColor) }

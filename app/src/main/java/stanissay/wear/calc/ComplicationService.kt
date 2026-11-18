@@ -31,13 +31,14 @@ class ComplicationService : SuspendingComplicationDataSourceService() {
 
     override suspend fun onComplicationRequest(request: ComplicationRequest): ComplicationData {
         val intent = Intent(this, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         return SmallImageComplicationData.Builder(
             smallImage = SmallImage.Builder(
-                image = Icon.createWithResource(this, R.drawable.calculator_vector),
+                image = Icon.createWithResource(this, R.drawable.ic_launcher),
                 type = SmallImageType.PHOTO
             ).build(),
             contentDescription = PlainComplicationText.Builder("Open Calculator").build()
@@ -49,7 +50,7 @@ class ComplicationService : SuspendingComplicationDataSourceService() {
     override fun getPreviewData(type: ComplicationType): ComplicationData {
         return SmallImageComplicationData.Builder(
             smallImage = SmallImage.Builder(
-                image = Icon.createWithResource(this, R.drawable.calculator_vector),
+                image = Icon.createWithResource(this, R.drawable.ic_launcher),
                 type = SmallImageType.PHOTO
             ).build(),
             contentDescription = PlainComplicationText.Builder("Preview").build()
