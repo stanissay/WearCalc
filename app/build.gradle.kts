@@ -11,7 +11,9 @@ plugins {
 android {
     namespace = "stanissay.wear.calc"
     compileSdk {
-        version = release(37)
+        version = release(37) {
+            minorApiLevel = 2
+        }
     }
 
     defaultConfig {
@@ -19,7 +21,7 @@ android {
         minSdk = 33
         targetSdk = 36
         versionCode = 1
-        versionName = "1.9"
+        versionName = "2.0"
     }
 
     buildTypes {
@@ -40,8 +42,8 @@ android {
 }
 
 dependencies {
-    implementation(platform("androidx.compose:compose-bom:2026.09.00"))
-    implementation("androidx.compose.ui:ui:1.12.1")
+    implementation(platform("androidx.compose:compose-bom:2026.11.01"))
+    implementation("androidx.compose.ui:ui:1.13.0")
     implementation("androidx.compose.ui:ui-graphics")
 
     implementation("androidx.activity:activity-compose:1.13.0")
@@ -49,14 +51,14 @@ dependencies {
 
     implementation("androidx.wear:wear:1.4.0")
 
-    implementation("androidx.wear.compose:compose-foundation:1.7.1")
+    implementation("androidx.wear.compose:compose-foundation:1.7.2")
     implementation("androidx.wear.watchface:watchface:1.3.0-alpha07")
     implementation("androidx.wear.watchface:watchface-complications-rendering:1.3.0-alpha07")
     implementation("androidx.wear.watchface:watchface-complications-data-source-ktx:1.3.0")
-    implementation("androidx.wear.compose:compose-material:1.7.1")
-    implementation("androidx.compose.material3:material3:1.4.0")
+    implementation("androidx.wear.compose:compose-material:1.7.2")
+    implementation("androidx.compose.material3:material3:1.5.0")
 
     implementation("com.google.android.gms:play-services-wearable:20.0.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.13.0")
-    implementation("androidx.compose.runtime:runtime:1.12.1")
+    implementation("androidx.compose.runtime:runtime:1.13.0")
 }
